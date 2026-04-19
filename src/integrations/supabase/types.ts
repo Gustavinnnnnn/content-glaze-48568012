@@ -294,6 +294,180 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_config: {
+        Row: {
+          admin_chat_ids: Json
+          bot_name: string | null
+          bot_token: string | null
+          bot_username: string | null
+          created_at: string
+          id: number
+          is_active: boolean
+          last_polled_at: string | null
+          notify_on_new_sale: boolean
+          notify_on_new_user: boolean
+          notify_on_new_vip: boolean
+          update_offset: number
+          updated_at: string
+          vip_channel_id: string | null
+          vip_channel_invite_link: string | null
+          vip_welcome_message: string | null
+          welcome_message: string | null
+        }
+        Insert: {
+          admin_chat_ids?: Json
+          bot_name?: string | null
+          bot_token?: string | null
+          bot_username?: string | null
+          created_at?: string
+          id: number
+          is_active?: boolean
+          last_polled_at?: string | null
+          notify_on_new_sale?: boolean
+          notify_on_new_user?: boolean
+          notify_on_new_vip?: boolean
+          update_offset?: number
+          updated_at?: string
+          vip_channel_id?: string | null
+          vip_channel_invite_link?: string | null
+          vip_welcome_message?: string | null
+          welcome_message?: string | null
+        }
+        Update: {
+          admin_chat_ids?: Json
+          bot_name?: string | null
+          bot_token?: string | null
+          bot_username?: string | null
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          last_polled_at?: string | null
+          notify_on_new_sale?: boolean
+          notify_on_new_user?: boolean
+          notify_on_new_vip?: boolean
+          update_offset?: number
+          updated_at?: string
+          vip_channel_id?: string | null
+          vip_channel_invite_link?: string | null
+          vip_welcome_message?: string | null
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
+      telegram_messages: {
+        Row: {
+          chat_id: number
+          created_at: string
+          direction: string
+          id: string
+          is_read: boolean
+          message_id: number | null
+          raw: Json | null
+          sent_by: string | null
+          text: string | null
+          update_id: number | null
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          direction: string
+          id?: string
+          is_read?: boolean
+          message_id?: number | null
+          raw?: Json | null
+          sent_by?: string | null
+          text?: string | null
+          update_id?: number | null
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          direction?: string
+          id?: string
+          is_read?: boolean
+          message_id?: number | null
+          raw?: Json | null
+          sent_by?: string | null
+          text?: string | null
+          update_id?: number | null
+        }
+        Relationships: []
+      }
+      telegram_notifications: {
+        Row: {
+          created_at: string
+          error: string | null
+          event_type: string
+          id: string
+          payload: Json
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      telegram_users: {
+        Row: {
+          chat_id: number
+          created_at: string
+          first_name: string | null
+          id: string
+          is_admin: boolean
+          is_blocked: boolean
+          last_interaction_at: string
+          last_name: string | null
+          telegram_user_id: number | null
+          updated_at: string
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          is_admin?: boolean
+          is_blocked?: boolean
+          last_interaction_at?: string
+          last_name?: string | null
+          telegram_user_id?: number | null
+          updated_at?: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          is_admin?: boolean
+          is_blocked?: boolean
+          last_interaction_at?: string
+          last_name?: string | null
+          telegram_user_id?: number | null
+          updated_at?: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
