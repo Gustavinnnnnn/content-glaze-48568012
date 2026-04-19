@@ -1,4 +1,6 @@
 import { ContentCard } from "@/components/ContentCard";
+import { VideoThumb } from "@/components/VideoThumb";
+import { VipPromoBanner } from "@/components/VipPromoBanner";
 import { Bell, Crown, Flame, Sparkles, TrendingUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNav } from "@/contexts/NavContext";
@@ -16,20 +18,22 @@ export const HomeScreen = () => {
   const [visible, setVisible] = useState(8);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const hero = videos.find((v) => v.is_featured) ?? videos[0];
-  const trending = videos.filter((v) => v.id !== hero?.id).slice(0, 6);
-  const feed = videos.slice(0, visible);
+  // Home shows up to 10 videos pulled from home + explore pool
+  const limited = videos.slice(0, 10);
+  const hero = limited.find((v) => v.is_featured) ?? limited[0];
+  const trending = limited.filter((v) => v.id !== hero?.id).slice(0, 6);
+  const feed = limited.slice(0, visible);
 
   useEffect(() => {
     const obs = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) setVisible((v) => Math.min(v + 6, videos.length));
+        if (entries[0].isIntersecting) setVisible((v) => Math.min(v + 6, limited.length));
       },
       { rootMargin: "200px" }
     );
     if (sentinelRef.current) obs.observe(sentinelRef.current);
     return () => obs.disconnect();
-  }, [videos.length]);
+  }, [limited.length]);
 
   return (
     <div className="safe-top">
@@ -57,7 +61,6 @@ export const HomeScreen = () => {
       </header>
 
       <div className="space-y-6 pb-4 pt-4">
-        {/* HERO */}
         {isLoading && (
           <section className="px-4">
             <Skeleton className="aspect-[16/11] w-full rounded-3xl" />
@@ -71,16 +74,12 @@ export const HomeScreen = () => {
               className="group relative block w-full overflow-hidden rounded-3xl shadow-floating active:scale-[0.99] transition-transform"
             >
               <div className="relative aspect-[16/11] w-full overflow-hidden bg-muted">
-                <img
-                  src={resolveImage(hero.thumbnail_url)}
-                  alt={hero.title}
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/30" />
+                <VideoThumb src={hero.video_url} alt={hero.title} className="transition-transform duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/30 pointer-events-none" />
                 <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-primary-foreground shadow-button">
                   <Flame className="h-3.5 w-3.5" /> Em destaque
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 p-5 text-left text-white">
+                <div className="absolute bottom-0 left-0 right-0 p-5 text-left text-white pointer-events-none">
                   {hero.categories?.name && (
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">
                       {hero.categories.name}
@@ -100,7 +99,14 @@ export const HomeScreen = () => {
           </section>
         )}
 
-        {/* Modelos populares */}
+        {/* VIP promo */}
+        {!vip.isVip && (
+          <section className="px-4">
+            <VipPromoBanner />
+          </section>
+        )}
+
+        {/* Modelos */}
         {models.length > 0 && (
           <section>
             <div className="mb-3 flex items-center justify-between px-5">
@@ -135,7 +141,6 @@ export const HomeScreen = () => {
           </section>
         )}
 
-        {/* Em alta */}
         {trending.length > 0 && (
           <section>
             <div className="mb-3 flex items-center gap-2 px-5">
@@ -150,14 +155,9 @@ export const HomeScreen = () => {
                   className="group relative w-44 shrink-0 overflow-hidden rounded-2xl shadow-card text-left active:scale-[0.97] transition-transform"
                 >
                   <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted">
-                    <img
-                      src={resolveImage(item.thumbnail_url)}
-                      alt={item.title}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                    <VideoThumb src={item.video_url} alt={item.title} className="transition-transform duration-500 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 right-0 p-3 text-white pointer-events-none">
                       {item.categories?.name && (
                         <p className="text-[9px] font-bold uppercase tracking-wider opacity-80">
                           {item.categories.name}
@@ -174,7 +174,6 @@ export const HomeScreen = () => {
           </section>
         )}
 
-        {/* Para você */}
         {feed.length > 0 && (
           <section className="px-4">
             <h2 className="mb-3 px-1 text-sm font-bold tracking-tight">Para você</h2>
@@ -184,13 +183,21 @@ export const HomeScreen = () => {
               ))}
             </div>
             <div ref={sentinelRef} className="flex h-20 items-center justify-center">
-              {visible < videos.length && (
+              {visible < limited.length && (
                 <div className="flex gap-1.5">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
                   <span className="h-2 w-2 animate-pulse rounded-full bg-primary [animation-delay:150ms]" />
                   <span className="h-2 w-2 animate-pulse rounded-full bg-primary [animation-delay:300ms]" />
                 </div>
               )}
+            </div>
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => setTab("explore")}
+                className="rounded-full bg-secondary px-5 py-2.5 text-xs font-bold"
+              >
+                Ver todos no Explorar →
+              </button>
             </div>
           </section>
         )}

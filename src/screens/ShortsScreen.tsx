@@ -3,27 +3,15 @@ import { Heart, MessageCircle, Share2, Lock, Sparkles, Crown, X } from "lucide-r
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { useVideos } from "@/hooks/useSiteData";
-import { resolveImage } from "@/lib/imageResolver";
 
 export const ShortsScreen = () => {
   const { data: shorts = [] } = useVideos("shorts");
   const { vip } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
   const [activeIndex, setActiveIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [paywallDismissed, setPaywallDismissed] = useState<Record<number, boolean>>({});
-
-  useEffect(() => {
-    setProgress(0);
-    const start = Date.now();
-    const id = setInterval(() => {
-      const elapsed = (Date.now() - start) / 6000;
-      setProgress(Math.min(elapsed * 100, 100));
-      if (elapsed >= 1) clearInterval(id);
-    }, 100);
-    return () => clearInterval(id);
-  }, [activeIndex]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -35,6 +23,18 @@ export const ShortsScreen = () => {
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
   }, [activeIndex]);
+
+  // Play active, pause others
+  useEffect(() => {
+    videoRefs.current.forEach((v, i) => {
+      if (i === activeIndex) {
+        v.play().catch(() => {});
+      } else {
+        v.pause();
+        v.currentTime = 0;
+      }
+    });
+  }, [activeIndex, shorts.length]);
 
   if (shorts.length === 0) {
     return (
@@ -55,12 +55,22 @@ export const ShortsScreen = () => {
               key={s.id}
               className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden"
             >
-              <img
-                src={resolveImage(s.thumbnail_url)}
-                alt={s.title}
-                loading={i < 2 ? "eager" : "lazy"}
-                className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`}
-              />
+              {s.video_url ? (
+                <video
+                  ref={(el) => {
+                    if (el) videoRefs.current.set(i, el);
+                    else videoRefs.current.delete(i);
+                  }}
+                  src={s.video_url}
+                  muted
+                  loop
+                  playsInline
+                  preload={Math.abs(i - activeIndex) <= 1 ? "auto" : "metadata"}
+                  className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`}
+                />
+              ) : (
+                <div className="h-full w-full bg-neutral-900" />
+              )}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/40" />
 
               <div className="absolute bottom-32 right-3 z-30 flex flex-col items-center gap-5 text-white">
@@ -82,6 +92,14 @@ export const ShortsScreen = () => {
                   </div>
                   <span className="text-[10px] font-semibold drop-shadow">Enviar</span>
                 </button>
+                {!vip.isVip && (
+                  <button onClick={() => setUpgradeOpen(true)} className="flex flex-col items-center gap-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full gradient-primary shadow-glow transition-transform active:scale-90">
+                      <Crown className="h-6 w-6 text-primary-foreground" />
+                    </div>
+                    <span className="text-[10px] font-bold drop-shadow">VIP</span>
+                  </button>
+                )}
               </div>
 
               <div className="absolute bottom-28 left-4 right-20 z-20 text-white">
@@ -148,7 +166,7 @@ export const ShortsScreen = () => {
           <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
             <div
               className="h-full bg-white transition-all duration-100"
-              style={{ width: i < activeIndex ? "100%" : i === activeIndex ? `${progress}%` : "0%" }}
+              style={{ width: i < activeIndex ? "100%" : i === activeIndex ? "100%" : "0%" }}
             />
           </div>
         ))}

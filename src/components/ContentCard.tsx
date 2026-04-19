@@ -3,8 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNav } from "@/contexts/NavContext";
 import { useState } from "react";
 import { UpgradeDialog } from "./UpgradeDialog";
+import { VideoThumb } from "./VideoThumb";
 import { cn } from "@/lib/utils";
-import { resolveImage } from "@/lib/imageResolver";
 import type { VideoRow } from "@/hooks/useSiteData";
 
 interface ContentCardProps {
@@ -34,16 +34,16 @@ export const ContentCard = ({ item, index }: ContentCardProps) => {
           className="relative block w-full overflow-hidden rounded-3xl bg-card shadow-card transition-transform duration-300 active:scale-[0.98]"
         >
           <div className="relative aspect-[4/5] w-full overflow-hidden bg-muted">
-            <img
-              src={resolveImage(item.thumbnail_url)}
+            <VideoThumb
+              src={item.video_url}
               alt={item.title}
-              loading="lazy"
+              blurred={locked}
               className={cn(
-                "h-full w-full object-cover transition-all duration-700 group-hover:scale-105",
+                "transition-all duration-700 group-hover:scale-105",
                 locked && "blur-xl scale-110"
               )}
             />
-            <div className="absolute inset-0 gradient-overlay" />
+            <div className="absolute inset-0 gradient-overlay pointer-events-none" />
 
             <div className="absolute left-3 top-3 flex gap-2">
               {item.is_featured && (
@@ -58,7 +58,7 @@ export const ContentCard = ({ item, index }: ContentCardProps) => {
               )}
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+            <div className="absolute bottom-0 left-0 right-0 p-4 text-white pointer-events-none">
               {item.categories?.name && (
                 <p className="text-[11px] font-semibold uppercase tracking-wider opacity-80">
                   {item.categories.name}

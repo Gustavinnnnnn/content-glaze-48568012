@@ -6,6 +6,7 @@ import { ShortsScreen } from "@/screens/ShortsScreen";
 import { ModelsScreen } from "@/screens/ModelsScreen";
 import { ModelProfileScreen } from "@/screens/ModelProfileScreen";
 import { VideoScreen } from "@/screens/VideoScreen";
+import { VipPromoModal } from "@/components/VipPromoModal";
 import { useNav } from "@/contexts/NavContext";
 
 const Index = () => {
@@ -29,6 +30,7 @@ const Index = () => {
         {view.type === "tab" && tab === "models" && <ModelsScreen />}
       </main>
       {!hideNav && <BottomNav active={tab} onChange={setTab} />}
+      <VipPromoModal />
     </div>
   );
 };

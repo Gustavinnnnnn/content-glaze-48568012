@@ -55,16 +55,21 @@ export interface SiteSettings {
 }
 
 // ---------- VIDEOS ----------
-export const useVideos = (placement?: Placement) =>
+// "home" = home + explore videos combined (limited)
+// "explore" = home + explore videos (full list)
+// "shorts" = only shorts
+// undefined = everything active
+export const useVideos = (scope?: Placement) =>
   useQuery({
-    queryKey: ["videos", placement ?? "all"],
+    queryKey: ["videos", scope ?? "all"],
     queryFn: async () => {
       let q = supabase
         .from("videos")
         .select("*, categories(name, slug), models(id, name, handle, avatar_url)")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
-      if (placement) q = q.eq("placement", placement);
+      if (scope === "shorts") q = q.eq("placement", "shorts");
+      else if (scope === "home" || scope === "explore") q = q.in("placement", ["home", "explore"]);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as VideoRow[];

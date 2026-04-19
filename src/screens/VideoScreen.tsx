@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Eye, Heart, Lock, Play, Share2, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, Heart, Lock, Share2, Sparkles, Loader2 } from "lucide-react";
 import { useNav } from "@/contexts/NavContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { ContentCard } from "@/components/ContentCard";
+import { VipPromoBanner } from "@/components/VipPromoBanner";
 import { useVideo, useVideos, recordView } from "@/hooks/useSiteData";
-import { resolveImage } from "@/lib/imageResolver";
 import { cn } from "@/lib/utils";
+
+const DEFAULT_DESCRIPTION =
+  "Veja completo no nosso VIP agora mesmo. Mais de 10.000 vídeos postados, sem propagandas, com novos conteúdos toda semana.";
 
 export const VideoScreen = ({ id }: { id: string }) => {
   const { back, openVideo } = useNav();
@@ -16,41 +19,54 @@ export const VideoScreen = ({ id }: { id: string }) => {
 
   const related = allVideos.filter((v) => v.id !== id).slice(0, 6);
 
-  const [elapsed, setElapsed] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [paywall, setPaywall] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const startRef = useRef<number>(Date.now());
-  const recordedRef = useRef<boolean>(false);
+  const recordedRef = useRef(false);
 
   const previewSeconds = item?.preview_seconds ?? 12;
   const isUnlocked = !item?.is_vip || vip.isVip;
 
   useEffect(() => {
-    if (!item) return;
-    if (isUnlocked) {
-      // Record view once
-      if (!recordedRef.current) {
+    setPaywall(false);
+    recordedRef.current = false;
+  }, [id]);
+
+  // Time-based paywall enforcement for VIP previews
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !item) return;
+    const onTime = () => {
+      if (!isUnlocked && v.currentTime >= previewSeconds) {
+        v.pause();
+        setPaywall(true);
+        if (!recordedRef.current) {
+          recordedRef.current = true;
+          recordView(item.id, v.currentTime, user?.id);
+        }
+      }
+    };
+    const onEnded = () => {
+      if (!recordedRef.current && item) {
+        recordedRef.current = true;
+        recordView(item.id, v.duration || 0, user?.id);
+      }
+    };
+    const onPlay = () => {
+      // Record a view as soon as the user starts playing (fully unlocked content)
+      if (isUnlocked && !recordedRef.current && item) {
         recordedRef.current = true;
         recordView(item.id, 0, user?.id);
       }
-      return;
-    }
-    startRef.current = Date.now();
-    setElapsed(0);
-    setPaywall(false);
-    const intervalId = setInterval(() => {
-      const e = (Date.now() - startRef.current) / 1000;
-      setElapsed(e);
-      if (e >= previewSeconds) {
-        setPaywall(true);
-        clearInterval(intervalId);
-        if (!recordedRef.current) {
-          recordedRef.current = true;
-          recordView(item.id, e, user?.id);
-        }
-      }
-    }, 200);
-    return () => clearInterval(intervalId);
+    };
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("ended", onEnded);
+    v.addEventListener("play", onPlay);
+    return () => {
+      v.removeEventListener("timeupdate", onTime);
+      v.removeEventListener("ended", onEnded);
+      v.removeEventListener("play", onPlay);
+    };
   }, [item, isUnlocked, previewSeconds, user?.id]);
 
   if (isLoading) {
@@ -70,44 +86,41 @@ export const VideoScreen = ({ id }: { id: string }) => {
     );
   }
 
-  const progress = isUnlocked ? 35 : Math.min((elapsed / previewSeconds) * 100, 100);
+  const description = item.description?.trim() || DEFAULT_DESCRIPTION;
 
   return (
     <div className="flex h-full flex-col bg-background">
       <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-black">
-        <img
-          src={resolveImage(item.thumbnail_url)}
-          alt={item.title}
-          className={cn("h-full w-full object-cover transition-all duration-500", paywall && "scale-110 blur-2xl")}
-        />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/40" />
+        {item.video_url ? (
+          <video
+            ref={videoRef}
+            src={item.video_url}
+            controls={!paywall}
+            playsInline
+            preload="metadata"
+            className={cn("h-full w-full bg-black object-contain transition-all duration-500", paywall && "scale-110 blur-2xl")}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-white/60 text-sm">
+            Vídeo indisponível
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40" />
 
         <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between p-3 safe-top">
           <button
             onClick={back}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-md text-white"
             aria-label="Voltar"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <button
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-md text-white"
             aria-label="Compartilhar"
           >
             <Share2 className="h-5 w-5" />
           </button>
-        </div>
-
-        {!paywall && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/15 backdrop-blur-md">
-              <Play className="h-7 w-7 fill-white text-white" />
-            </div>
-          </div>
-        )}
-
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-          <div className="h-full bg-primary transition-all duration-200" style={{ width: `${progress}%` }} />
         </div>
 
         {paywall && (
@@ -156,12 +169,17 @@ export const VideoScreen = ({ id }: { id: string }) => {
             </button>
           </div>
 
-          {item.description && (
-            <div className="mt-5 rounded-2xl bg-card p-4 shadow-card">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descrição</h2>
-              <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{item.description}</p>
+          {/* VIP promo banner — sempre visível abaixo de qualquer vídeo */}
+          {!vip.isVip && (
+            <div className="mt-4">
+              <VipPromoBanner />
             </div>
           )}
+
+          <div className="mt-5 rounded-2xl bg-card p-4 shadow-card">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descrição</h2>
+            <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{description}</p>
+          </div>
         </div>
 
         {related.length > 0 && (
