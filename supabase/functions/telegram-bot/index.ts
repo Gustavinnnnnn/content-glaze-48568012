@@ -24,8 +24,10 @@ async function tg(token: string, method: string, body?: any) {
 function buildMenuKeyboard(miniAppUrl: string | null, vipLink: string | null) {
   const rows: any[] = [];
   if (miniAppUrl) {
-    rows.push([{ text: "🎬 Ver conteúdos", web_app: { url: miniAppUrl } }]);
-    rows.push([{ text: "👑 Acesso VIP", web_app: { url: `${miniAppUrl}#vip` } }]);
+    const base = miniAppUrl.replace(/#.*$/, "").replace(/\/$/, "");
+    rows.push([{ text: "🎬 Conteúdos", web_app: { url: `${base}/#explore` } }]);
+    rows.push([{ text: "🔥 Modelos", web_app: { url: `${base}/#models` } }]);
+    rows.push([{ text: "👑 Acesso VIP", web_app: { url: `${base}/#vip` } }]);
   }
   if (vipLink) {
     rows.push([{ text: "📢 Canal VIP", url: vipLink }]);

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { BottomNav } from "@/components/BottomNav";
 import { HomeScreen } from "@/screens/HomeScreen";
@@ -7,13 +8,31 @@ import { ModelsScreen } from "@/screens/ModelsScreen";
 import { ModelProfileScreen } from "@/screens/ModelProfileScreen";
 import { VideoScreen } from "@/screens/VideoScreen";
 import { VipPromoModal } from "@/components/VipPromoModal";
-import { useNav } from "@/contexts/NavContext";
+import { UpgradeDialog } from "@/components/UpgradeDialog";
+import { useNav, Tab } from "@/contexts/NavContext";
 
 const Index = () => {
   const { tab, setTab, view } = useNav();
+  const [vipOpen, setVipOpen] = useState(false);
   const isShorts = tab === "shorts" && view.type === "tab";
   const isFullScreen = view.type === "video" || view.type === "model";
   const hideNav = view.type === "video";
+
+  // Deep-link via hash (used by Telegram Mini App buttons): #explore | #models | #vip | #home
+  useEffect(() => {
+    const apply = () => {
+      const h = window.location.hash.replace("#", "").toLowerCase();
+      if (h === "vip") {
+        setVipOpen(true);
+        return;
+      }
+      const tabs: Tab[] = ["home", "explore", "shorts", "models"];
+      if (tabs.includes(h as Tab)) setTab(h as Tab);
+    };
+    apply();
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
+  }, [setTab]);
 
   return (
     <div className="relative mx-auto flex h-[100dvh] w-full max-w-[480px] flex-col overflow-hidden bg-background">
@@ -31,6 +50,7 @@ const Index = () => {
       </main>
       {!hideNav && <BottomNav active={tab} onChange={setTab} />}
       <VipPromoModal />
+      <UpgradeDialog open={vipOpen} onOpenChange={setVipOpen} />
     </div>
   );
 };
