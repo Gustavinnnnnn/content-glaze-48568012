@@ -1,7 +1,8 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Check, Crown, Sparkles, Zap } from "lucide-react";
-import { useUser } from "@/contexts/UserContext";
-import { toast } from "sonner";
+import { Check, Crown, Sparkles, Zap, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useActivateVip, useSiteSettings } from "@/hooks/useSiteData";
+import { useNavigate } from "react-router-dom";
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -9,7 +10,10 @@ interface UpgradeDialogProps {
 }
 
 export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
-  const { upgrade } = useUser();
+  const { user } = useAuth();
+  const { data: settings } = useSiteSettings();
+  const activate = useActivateVip();
+  const navigate = useNavigate();
 
   const benefits = [
     { icon: Zap, text: "Acesso ilimitado a todo acervo" },
@@ -17,11 +21,18 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
     { icon: Crown, text: "Experiência sem interrupções" },
   ];
 
-  const handleActivate = () => {
-    upgrade();
+  const handleActivate = async () => {
+    if (!user) {
+      onOpenChange(false);
+      navigate("/auth");
+      return;
+    }
+    await activate.mutateAsync();
     onOpenChange(false);
-    toast.success("Acesso Premium ativado!", { description: "Aproveite tudo sem limites." });
   };
+
+  const price = settings?.vip_monthly_price ?? 49.9;
+  const days = settings?.vip_duration_days ?? 30;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -30,11 +41,13 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
           <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
           <div className="absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
           <div className="relative">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur animate-float">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur">
               <Crown className="h-8 w-8" />
             </div>
-            <h2 className="mt-4 text-3xl font-extrabold tracking-tight">Acesso completo</h2>
-            <p className="mt-2 text-sm opacity-90">Desbloqueie tudo, sem limites</p>
+            <h2 className="mt-4 text-3xl font-extrabold tracking-tight">Acesso VIP</h2>
+            <p className="mt-1 text-sm opacity-90">
+              R$ {price.toFixed(2).replace(".", ",")} por {days} dias
+            </p>
           </div>
         </div>
 
@@ -53,9 +66,16 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
         <div className="px-6 pb-6">
           <button
             onClick={handleActivate}
-            className="gradient-primary shadow-button w-full rounded-full py-4 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98] animate-pulse-glow"
+            disabled={activate.isPending}
+            className="gradient-primary shadow-button flex w-full items-center justify-center gap-2 rounded-full py-4 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
           >
-            Ativar agora
+            {activate.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : !user ? (
+              "Entrar e ativar"
+            ) : (
+              "Ativar agora"
+            )}
           </button>
           <button
             onClick={() => onOpenChange(false)}

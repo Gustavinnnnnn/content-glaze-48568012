@@ -6,14 +6,13 @@ import { ShortsScreen } from "@/screens/ShortsScreen";
 import { ModelsScreen } from "@/screens/ModelsScreen";
 import { ModelProfileScreen } from "@/screens/ModelProfileScreen";
 import { VideoScreen } from "@/screens/VideoScreen";
-import { UserProvider } from "@/contexts/UserContext";
-import { NavProvider, useNav } from "@/contexts/NavContext";
+import { useNav } from "@/contexts/NavContext";
 
-const Inner = () => {
+const Index = () => {
   const { tab, setTab, view } = useNav();
   const isShorts = tab === "shorts" && view.type === "tab";
   const isFullScreen = view.type === "video" || view.type === "model";
-  const hideNav = view.type === "video"; // immersive video page
+  const hideNav = view.type === "video";
 
   return (
     <div className="relative mx-auto flex h-[100dvh] w-full max-w-[480px] flex-col overflow-hidden bg-background">
@@ -33,13 +32,5 @@ const Inner = () => {
     </div>
   );
 };
-
-const Index = () => (
-  <UserProvider>
-    <NavProvider>
-      <Inner />
-    </NavProvider>
-  </UserProvider>
-);
 
 export default Index;

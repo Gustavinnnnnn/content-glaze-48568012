@@ -1,22 +1,25 @@
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { contentList } from "@/data/content";
 import { ContentCard } from "@/components/ContentCard";
+import { useVideos } from "@/hooks/useSiteData";
 
 export const ExploreScreen = () => {
   const [query, setQuery] = useState("");
+  const { data: videos = [] } = useVideos("explore");
 
   const results = useMemo(() => {
-    if (!query.trim()) return contentList;
+    if (!query.trim()) return videos;
     const q = query.toLowerCase();
-    return contentList.filter(
-      (c) => c.title.toLowerCase().includes(q) || c.category.toLowerCase().includes(q)
+    return videos.filter(
+      (c) =>
+        c.title.toLowerCase().includes(q) ||
+        c.categories?.name.toLowerCase().includes(q) ||
+        c.description?.toLowerCase().includes(q)
     );
-  }, [query]);
+  }, [query, videos]);
 
   return (
     <div className="safe-top">
-      {/* Search header */}
       <header className="sticky top-0 z-30 glass border-b border-border/40 px-5 py-4">
         <h1 className="mb-3 text-2xl font-extrabold tracking-tight">Explorar</h1>
         <div className="relative">
@@ -30,7 +33,6 @@ export const ExploreScreen = () => {
         </div>
       </header>
 
-      {/* Apenas vídeos */}
       <div className="px-4 py-5">
         {query.trim() && (
           <p className="mb-3 px-1 text-xs font-semibold text-muted-foreground">

@@ -1,28 +1,26 @@
 import { Flame, Sparkles, Lock, Eye } from "lucide-react";
-import { ContentItem } from "@/data/content";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNav } from "@/contexts/NavContext";
 import { useState } from "react";
 import { UpgradeDialog } from "./UpgradeDialog";
 import { cn } from "@/lib/utils";
+import { resolveImage } from "@/lib/imageResolver";
+import type { VideoRow } from "@/hooks/useSiteData";
 
 interface ContentCardProps {
-  item: ContentItem;
+  item: VideoRow;
   index: number;
 }
 
 export const ContentCard = ({ item, index }: ContentCardProps) => {
-  const { plan } = useUser();
+  const { vip } = useAuth();
   const { openVideo } = useNav();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const locked = item.premium && plan === "free";
+  const locked = item.is_vip && !vip.isVip;
 
   const handleClick = () => {
-    if (locked) {
-      setUpgradeOpen(true);
-    } else {
-      openVideo(item.id);
-    }
+    if (locked) setUpgradeOpen(true);
+    else openVideo(item.id);
   };
 
   return (
@@ -37,7 +35,7 @@ export const ContentCard = ({ item, index }: ContentCardProps) => {
         >
           <div className="relative aspect-[4/5] w-full overflow-hidden bg-muted">
             <img
-              src={item.image}
+              src={resolveImage(item.thumbnail_url)}
               alt={item.title}
               loading="lazy"
               className={cn(
@@ -48,24 +46,28 @@ export const ContentCard = ({ item, index }: ContentCardProps) => {
             <div className="absolute inset-0 gradient-overlay" />
 
             <div className="absolute left-3 top-3 flex gap-2">
-              {item.badge === "alta" && (
+              {item.is_featured && (
                 <span className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow-button">
-                  <Flame className="h-3 w-3" /> Em alta
+                  <Flame className="h-3 w-3" /> Destaque
                 </span>
               )}
-              {item.badge === "novo" && (
+              {item.is_vip && (
                 <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-foreground shadow">
-                  <Sparkles className="h-3 w-3 text-primary" /> Novo
+                  <Sparkles className="h-3 w-3 text-primary" /> VIP
                 </span>
               )}
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-              <p className="text-[11px] font-semibold uppercase tracking-wider opacity-80">{item.category}</p>
+              {item.categories?.name && (
+                <p className="text-[11px] font-semibold uppercase tracking-wider opacity-80">
+                  {item.categories.name}
+                </p>
+              )}
               <h3 className="mt-1 text-lg font-bold leading-tight drop-shadow">{item.title}</h3>
               <div className="mt-2 flex items-center gap-1 text-xs opacity-90">
                 <Eye className="h-3.5 w-3.5" />
-                <span>{item.views} visualizações</span>
+                <span>{item.view_count.toLocaleString("pt-BR")} visualizações</span>
               </div>
             </div>
 
@@ -75,9 +77,7 @@ export const ContentCard = ({ item, index }: ContentCardProps) => {
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full gradient-primary shadow-glow">
                     <Lock className="h-5 w-5 text-primary-foreground" />
                   </div>
-                  <p className="mt-3 text-xs font-semibold text-foreground">
-                    Conteúdo completo no Premium
-                  </p>
+                  <p className="mt-3 text-xs font-semibold text-foreground">Conteúdo VIP</p>
                   <span className="mt-1 inline-block text-[10px] font-bold uppercase tracking-wider text-primary">
                     Desbloquear acesso →
                   </span>

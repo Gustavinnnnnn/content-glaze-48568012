@@ -1,11 +1,13 @@
-import { models } from "@/data/models";
 import { useNav } from "@/contexts/NavContext";
 import { Crown, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useModels } from "@/hooks/useSiteData";
+import { resolveImage } from "@/lib/imageResolver";
 
 export const ModelsScreen = () => {
   const { openModel } = useNav();
   const [query, setQuery] = useState("");
+  const { data: models = [] } = useModels();
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -13,7 +15,7 @@ export const ModelsScreen = () => {
     return models.filter(
       (m) => m.name.toLowerCase().includes(q) || m.handle.toLowerCase().includes(q)
     );
-  }, [query]);
+  }, [query, models]);
 
   return (
     <div className="safe-top">
@@ -40,35 +42,35 @@ export const ModelsScreen = () => {
         </div>
       </header>
 
-      {/* Featured strip */}
-      <section className="px-4 pt-4">
-        <h2 className="mb-3 px-1 text-sm font-bold text-muted-foreground">Em destaque</h2>
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar">
-          {models.slice(0, 6).map((m) => (
-            <button
-              key={m.id}
-              onClick={() => openModel(m.id)}
-              className="flex w-20 shrink-0 flex-col items-center gap-1.5"
-            >
-              <div className="rounded-full bg-gradient-to-tr from-primary to-primary-glow p-[2px]">
-                <img
-                  src={m.avatar}
-                  alt={m.name}
-                  loading="lazy"
-                  className="h-16 w-16 rounded-full border-2 border-background object-cover"
-                />
-              </div>
-              <span className="line-clamp-1 text-[10px] font-semibold">{m.name.split(" ")[0]}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      {models.length > 0 && (
+        <section className="px-4 pt-4">
+          <h2 className="mb-3 px-1 text-sm font-bold text-muted-foreground">Em destaque</h2>
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar">
+            {models.slice(0, 6).map((m) => (
+              <button
+                key={m.id}
+                onClick={() => openModel(m.id)}
+                className="flex w-20 shrink-0 flex-col items-center gap-1.5"
+              >
+                <div className="rounded-full bg-gradient-to-tr from-primary to-primary-glow p-[2px]">
+                  <img
+                    src={resolveImage(m.avatar_url)}
+                    alt={m.name}
+                    loading="lazy"
+                    className="h-16 w-16 rounded-full border-2 border-background object-cover"
+                  />
+                </div>
+                <span className="line-clamp-1 text-[10px] font-semibold">
+                  {m.name.split(" ")[0]}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Grid */}
       <section className="px-4 py-4">
-        <h2 className="mb-3 px-1 text-sm font-bold text-muted-foreground">
-          Todas as modelos
-        </h2>
+        <h2 className="mb-3 px-1 text-sm font-bold text-muted-foreground">Todas as modelos</h2>
         <div className="grid grid-cols-2 gap-3">
           {list.map((m, i) => (
             <button
@@ -79,14 +81,14 @@ export const ModelsScreen = () => {
             >
               <div className="relative aspect-[3/4] w-full overflow-hidden">
                 <img
-                  src={m.avatar}
+                  src={resolveImage(m.avatar_url)}
                   alt={m.name}
                   loading="lazy"
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-transparent" />
                 <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[10px] font-bold text-primary shadow">
-                  <Crown className="h-3 w-3" /> R$ {m.price.toFixed(2).replace(".", ",")}
+                  <Crown className="h-3 w-3" /> R$ {Number(m.monthly_price).toFixed(2).replace(".", ",")}
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
                   <p className="text-sm font-bold leading-tight drop-shadow">{m.name}</p>
