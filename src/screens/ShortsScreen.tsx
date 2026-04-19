@@ -15,6 +15,7 @@ export const ShortsScreen = () => {
   const { vip } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   
+  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [paywallDismissed, setPaywallDismissed] = useState<Record<number, boolean>>({});
@@ -34,34 +35,33 @@ export const ShortsScreen = () => {
     return items;
   }, [shorts, vip.isVip]);
 
+  // Use IntersectionObserver to reliably detect which section is on screen.
+  // Only the active section mounts a <video>; siblings unmount entirely → no ghost playback/audio.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const onScroll = () => {
-      const idx = Math.round(el.scrollTop / el.clientHeight);
-      if (idx !== activeIndex) setActiveIndex(idx);
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [activeIndex]);
+    const sections = sectionRefs.current.filter(Boolean) as HTMLElement[];
+    if (sections.length === 0) return;
 
-  // Play active, pause others. Re-query DOM each time so we always see the latest <video> nodes.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const videos = el.querySelectorAll<HTMLVideoElement>("video[data-short]");
-    videos.forEach((v) => {
-      const idx = Number(v.dataset.index);
-      if (idx === activeIndex) {
-        v.muted = muted;
-        const p = v.play();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-      } else {
-        v.pause();
-        if (v.currentTime > 0.1) v.currentTime = 0;
-      }
-    });
-  }, [activeIndex, feed.length, muted]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the entry with the highest intersection ratio that is >= 0.6
+        let best: IntersectionObserverEntry | null = null;
+        for (const e of entries) {
+          if (e.intersectionRatio >= 0.6 && (!best || e.intersectionRatio > best.intersectionRatio)) {
+            best = e;
+          }
+        }
+        if (best) {
+          const idx = Number((best.target as HTMLElement).dataset.idx);
+          if (!Number.isNaN(idx)) setActiveIndex(idx);
+        }
+      },
+      { root: el, threshold: [0.6, 0.9] }
+    );
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, [feed.length]);
 
   if (feed.length === 0) {
     return (
