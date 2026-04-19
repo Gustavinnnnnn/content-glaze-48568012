@@ -304,6 +304,7 @@ export type Database = {
           id: number
           is_active: boolean
           last_polled_at: string | null
+          mini_app_url: string | null
           notify_on_new_sale: boolean
           notify_on_new_user: boolean
           notify_on_new_vip: boolean
@@ -312,6 +313,7 @@ export type Database = {
           vip_channel_id: string | null
           vip_channel_invite_link: string | null
           vip_welcome_message: string | null
+          webhook_secret: string | null
           welcome_message: string | null
         }
         Insert: {
@@ -323,6 +325,7 @@ export type Database = {
           id: number
           is_active?: boolean
           last_polled_at?: string | null
+          mini_app_url?: string | null
           notify_on_new_sale?: boolean
           notify_on_new_user?: boolean
           notify_on_new_vip?: boolean
@@ -331,6 +334,7 @@ export type Database = {
           vip_channel_id?: string | null
           vip_channel_invite_link?: string | null
           vip_welcome_message?: string | null
+          webhook_secret?: string | null
           welcome_message?: string | null
         }
         Update: {
@@ -342,6 +346,7 @@ export type Database = {
           id?: number
           is_active?: boolean
           last_polled_at?: string | null
+          mini_app_url?: string | null
           notify_on_new_sale?: boolean
           notify_on_new_user?: boolean
           notify_on_new_vip?: boolean
@@ -350,6 +355,7 @@ export type Database = {
           vip_channel_id?: string | null
           vip_channel_invite_link?: string | null
           vip_welcome_message?: string | null
+          webhook_secret?: string | null
           welcome_message?: string | null
         }
         Relationships: []
