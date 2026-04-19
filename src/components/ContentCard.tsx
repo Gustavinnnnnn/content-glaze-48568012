@@ -1,4 +1,5 @@
-import { Flame, Sparkles, Lock, Eye } from "lucide-react";
+import { Flame, Lock, Eye } from "lucide-react";
+import { displayViews, formatViews } from "@/lib/displayViews";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNav } from "@/contexts/NavContext";
 import { useState } from "react";
