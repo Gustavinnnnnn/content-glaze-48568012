@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Crown, Flame, X, Check } from "lucide-react";
+import { Crown, X, Check, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeDialog } from "./UpgradeDialog";
 import { useSiteSettings } from "@/hooks/useSiteData";
@@ -34,75 +34,87 @@ export const VipPromoModal = () => {
   return (
     <>
       <div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/70 backdrop-blur-md p-4 animate-fade-in"
+        className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/60 p-3 animate-fade-in sm:items-center"
         onClick={() => setOpen(false)}
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-sm overflow-hidden rounded-[28px] bg-card shadow-floating"
+          className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-card shadow-floating animate-slide-up sm:animate-fade-in"
         >
           <button
             onClick={() => setOpen(false)}
-            className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-card transition-transform active:scale-90"
+            className="absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors hover:bg-muted"
             aria-label="Fechar"
           >
             <X className="h-4 w-4" />
           </button>
 
-          <div className="gradient-primary relative px-6 pb-7 pt-9 text-center text-primary-foreground">
-            <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/15 blur-2xl" />
-            <div className="absolute -bottom-10 -left-10 h-44 w-44 rounded-full bg-white/15 blur-2xl" />
-            <div className="relative">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white/20 backdrop-blur shadow-glow">
-                <Crown className="h-8 w-8" />
+          {/* Clean header — no gradient */}
+          <div className="border-b border-border px-5 pb-4 pt-5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Crown className="h-5 w-5" strokeWidth={2.5} />
               </div>
-              <p className="mt-4 text-[10px] font-extrabold uppercase tracking-[0.25em] opacity-90">
-                Oferta exclusiva
-              </p>
-              <h2 className="mt-1 text-3xl font-extrabold leading-tight">
-                Libere o VIP
-              </h2>
-              <p className="mx-auto mt-2 max-w-[280px] text-xs opacity-95">
-                Mais de <strong>10.000 vídeos</strong> exclusivos, sem propaganda e sem limite.
-              </p>
-              <div className="mt-4 inline-flex items-baseline gap-1.5 rounded-full bg-white/20 px-4 py-1.5 backdrop-blur">
-                <span className="text-2xl font-extrabold">
-                  R$ {price.toFixed(2).replace(".", ",")}
-                </span>
-                <span className="text-xs font-semibold opacity-90">/ {days} dias</span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                  Acesso completo
+                </p>
+                <p className="text-base font-extrabold leading-tight">Vire VIP</p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4 p-6">
-            <ul className="space-y-2.5 text-sm">
+          {/* Body */}
+          <div className="px-5 py-4">
+            <p className="text-sm text-foreground/80">
+              Desbloqueie todo o conteúdo das modelos sem limites.
+            </p>
+
+            <ul className="mt-3 space-y-1.5">
               {[
-                "Acervo completo desbloqueado",
-                "Novos vídeos toda semana",
-                "Sem anúncios, sem espera",
+                "Catálogo completo desbloqueado",
+                "Atualizações semanais",
+                "Sem anúncios ou interrupções",
               ].map((t) => (
-                <li key={t} className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-                    <Check className="h-4 w-4" strokeWidth={3} />
-                  </span>
-                  <span className="font-semibold">{t}</span>
+                <li key={t} className="flex items-center gap-2 text-[13px]">
+                  <Check className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={3} />
+                  <span className="font-medium">{t}</span>
                 </li>
               ))}
             </ul>
+
+            {/* Price block */}
+            <div className="mt-4 flex items-end justify-between rounded-xl bg-secondary px-4 py-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Acesso por {days} dias
+                </p>
+                <div className="mt-0.5 flex items-baseline gap-1">
+                  <span className="text-[11px] font-semibold text-muted-foreground">R$</span>
+                  <span className="text-2xl font-extrabold leading-none">
+                    {price.toFixed(2).replace(".", ",")}
+                  </span>
+                </div>
+              </div>
+              <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                PIX
+              </span>
+            </div>
+
             <button
               onClick={() => {
                 setOpen(false);
                 setUpgradeOpen(true);
               }}
-              className="gradient-primary shadow-button flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-extrabold text-primary-foreground transition-transform active:scale-[0.98]"
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-foreground py-3.5 text-sm font-extrabold text-background transition-transform active:scale-[0.98]"
             >
-              <Flame className="h-4 w-4" /> Quero ser VIP agora
+              Quero ser VIP <ArrowRight className="h-4 w-4" />
             </button>
             <button
               onClick={() => setOpen(false)}
-              className="block w-full text-center text-[11px] font-semibold text-muted-foreground"
+              className="mt-2 block w-full text-center text-[11px] font-semibold text-muted-foreground"
             >
-              Continuar sem VIP
+              Agora não
             </button>
           </div>
         </div>
