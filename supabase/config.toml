@@ -2,3 +2,6 @@ project_id = "kntzldszioizoqpkxpip"
 
 [functions.telegram-bot]
 verify_jwt = false
+
+[functions.paradise-webhook]
+verify_jwt = false
