@@ -45,15 +45,20 @@ export const ShortsScreen = () => {
     return () => el.removeEventListener("scroll", onScroll);
   }, [activeIndex]);
 
-  // Play active, pause others
+  // Play active, pause others. Re-query DOM each time so we always see the latest <video> nodes.
   useEffect(() => {
-    videoRefs.current.forEach((v, i) => {
-      if (i === activeIndex) {
+    const el = containerRef.current;
+    if (!el) return;
+    const videos = el.querySelectorAll<HTMLVideoElement>("video[data-short]");
+    videos.forEach((v) => {
+      const idx = Number(v.dataset.index);
+      if (idx === activeIndex) {
         v.muted = muted;
-        v.play().catch(() => {});
+        const p = v.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
       } else {
         v.pause();
-        v.currentTime = 0;
+        if (v.currentTime > 0.1) v.currentTime = 0;
       }
     });
   }, [activeIndex, feed.length, muted]);
