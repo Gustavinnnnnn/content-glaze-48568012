@@ -140,7 +140,7 @@ export const ExploreScreen = () => {
                       </div>
                     )}
                   </button>
-                </>
+                </div>
               );
             })}
           </div>
