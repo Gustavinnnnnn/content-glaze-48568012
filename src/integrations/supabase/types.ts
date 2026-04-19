@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_fees: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_permissions: {
         Row: {
           can_manage_admins: boolean
@@ -169,6 +202,7 @@ export type Database = {
           created_at: string
           currency: string
           duration_days: number
+          fee_id: string | null
           gateway_metadata: Json | null
           gateway_transaction_id: string | null
           id: string
@@ -186,6 +220,7 @@ export type Database = {
           created_at?: string
           currency?: string
           duration_days?: number
+          fee_id?: string | null
           gateway_metadata?: Json | null
           gateway_transaction_id?: string | null
           id?: string
@@ -203,6 +238,7 @@ export type Database = {
           created_at?: string
           currency?: string
           duration_days?: number
+          fee_id?: string | null
           gateway_metadata?: Json | null
           gateway_transaction_id?: string | null
           id?: string
@@ -216,6 +252,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_fee_id_fkey"
+            columns: ["fee_id"]
+            isOneToOne: false
+            referencedRelation: "access_fees"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_model_id_fkey"
             columns: ["model_id"]
@@ -235,28 +278,37 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          banned_at: string | null
+          banned_reason: string | null
           created_at: string
           display_name: string | null
           email: string | null
           id: string
+          is_banned: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          banned_at?: string | null
+          banned_reason?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
           id?: string
+          is_banned?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          banned_at?: string | null
+          banned_reason?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
           id?: string
+          is_banned?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -490,6 +542,38 @@ export type Database = {
         }
         Relationships: []
       }
+      user_fee_progress: {
+        Row: {
+          fee_id: string
+          id: string
+          order_id: string | null
+          paid_at: string
+          user_id: string
+        }
+        Insert: {
+          fee_id: string
+          id?: string
+          order_id?: string | null
+          paid_at?: string
+          user_id: string
+        }
+        Update: {
+          fee_id?: string
+          id?: string
+          order_id?: string | null
+          paid_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_fee_progress_fee_id_fkey"
+            columns: ["fee_id"]
+            isOneToOne: false
+            referencedRelation: "access_fees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -662,6 +746,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_user_account: { Args: { _user_id: string }; Returns: undefined }
       has_permission: {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
@@ -678,7 +763,20 @@ export type Database = {
         Args: { _model_id: string; _user_id: string }
         Returns: boolean
       }
+      is_user_banned: { Args: { _user_id: string }; Returns: boolean }
       is_vip: { Args: { _user_id: string }; Returns: boolean }
+      next_pending_fee: {
+        Args: { _user_id: string }
+        Returns: {
+          amount: number
+          description: string
+          display_order: number
+          fee_id: string
+          name: string
+          step_index: number
+          total_steps: number
+        }[]
+      }
     }
     Enums: {
       app_role: "user" | "admin" | "super_admin"
