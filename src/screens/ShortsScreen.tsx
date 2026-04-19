@@ -1,18 +1,38 @@
-import { useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, Share2, Lock, Sparkles, Crown, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Heart, MessageCircle, Share2, Lock, Sparkles, Crown, X, Volume2, VolumeX, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
-import { useVideos } from "@/hooks/useSiteData";
+import { useVideos, useSiteSettings, type VideoRow } from "@/hooks/useSiteData";
 import { displayViews, formatViews } from "@/lib/displayViews";
+
+type FeedItem =
+  | { kind: "video"; video: VideoRow }
+  | { kind: "promo"; id: string };
 
 export const ShortsScreen = () => {
   const { data: shorts = [] } = useVideos("shorts");
+  const { data: settings } = useSiteSettings();
   const { vip } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
   const [activeIndex, setActiveIndex] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [paywallDismissed, setPaywallDismissed] = useState<Record<number, boolean>>({});
+  const [muted, setMuted] = useState(true); // start muted (autoplay needs it), unmute on tap
+
+  const vipPrice = settings?.vip_monthly_price ?? 19.9;
+
+  // Build the feed: every 3 videos, inject a full-screen VIP promo (only for non-VIP users)
+  const feed: FeedItem[] = useMemo(() => {
+    const items: FeedItem[] = [];
+    shorts.forEach((v, idx) => {
+      items.push({ kind: "video", video: v });
+      if (!vip.isVip && (idx + 1) % 3 === 0) {
+        items.push({ kind: "promo", id: `promo-${idx}` });
+      }
+    });
+    return items;
+  }, [shorts, vip.isVip]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -29,31 +49,79 @@ export const ShortsScreen = () => {
   useEffect(() => {
     videoRefs.current.forEach((v, i) => {
       if (i === activeIndex) {
+        v.muted = muted;
         v.play().catch(() => {});
       } else {
         v.pause();
         v.currentTime = 0;
       }
     });
-  }, [activeIndex, shorts.length]);
+  }, [activeIndex, feed.length, muted]);
 
-  if (shorts.length === 0) {
+  if (feed.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center bg-black px-6 text-center text-white">
-        <p className="text-sm font-semibold opacity-80">Nenhum short disponível ainda.</p>
+        <p className="text-sm font-semibold opacity-80">Nenhum vídeo disponível ainda.</p>
       </div>
     );
   }
 
   return (
     <div className="relative h-full bg-black">
-      <div ref={containerRef} className="h-full snap-y snap-mandatory overflow-y-auto no-scrollbar">
-        {shorts.map((s, i) => {
+      <div ref={containerRef} className="h-full snap-y snap-mandatory overflow-y-auto no-scrollbar overscroll-contain">
+        {feed.map((item, i) => {
+          if (item.kind === "promo") {
+            return (
+              <section
+                key={item.id}
+                className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden bg-gradient-to-br from-[hsl(20_95%_55%)] via-[hsl(15_92%_50%)] to-[hsl(0_85%_48%)] text-white"
+              >
+                <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-20 -left-16 h-72 w-72 rounded-full bg-yellow-300/20 blur-3xl" />
+                <div className="relative z-10 mx-auto flex max-w-sm flex-col items-center px-6 text-center">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white/15 backdrop-blur-md">
+                    <Crown className="h-10 w-10 text-white drop-shadow-lg" />
+                  </div>
+                  <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.2em] opacity-95">
+                    Acesso VIP · Pagamento único
+                  </p>
+                  <h2 className="mt-2 text-3xl font-extrabold leading-tight drop-shadow-md">
+                    Pare de assistir só prévias
+                  </h2>
+                  <p className="mt-3 text-sm font-medium opacity-95">
+                    Libere TODAS as modelos, todos os vídeos completos, sem cortes e sem limites.
+                  </p>
+                  <div className="mt-5 w-full space-y-2 text-left">
+                    {["Acesso a todas as modelos", "Vídeos completos com som", "Conteúdo VIP exclusivo"].map((b) => (
+                      <div key={b} className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 backdrop-blur-md">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[hsl(15_92%_45%)]">
+                          <Check className="h-3 w-3" />
+                        </div>
+                        <span className="text-xs font-bold">{b}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setUpgradeOpen(true)}
+                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-white py-4 text-sm font-extrabold text-[hsl(15_92%_45%)] shadow-floating transition-transform active:scale-[0.97]"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Liberar tudo por R$ {vipPrice.toFixed(2).replace(".", ",")}
+                  </button>
+                  <p className="mt-2 text-[10px] font-semibold opacity-90">
+                    Ativação imediata · Continue arrastando para ver mais prévias
+                  </p>
+                </div>
+              </section>
+            );
+          }
+
+          const s = item.video;
           const locked = s.is_vip && !vip.isVip;
           const showPaywall = locked && !paywallDismissed[i];
           return (
             <section
-              key={s.id}
+              key={s.id + "-" + i}
               className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden"
             >
               {s.video_url ? (
@@ -63,16 +131,25 @@ export const ShortsScreen = () => {
                     else videoRefs.current.delete(i);
                   }}
                   src={s.video_url}
-                  muted
                   loop
                   playsInline
                   preload={Math.abs(i - activeIndex) <= 1 ? "auto" : "metadata"}
                   className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`}
+                  onClick={() => setMuted((m) => !m)}
                 />
               ) : (
                 <div className="h-full w-full bg-neutral-900" />
               )}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/40" />
+
+              {/* Mute toggle */}
+              <button
+                onClick={() => setMuted((m) => !m)}
+                className="absolute right-3 top-20 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md"
+                aria-label={muted ? "Ativar som" : "Mutar"}
+              >
+                {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </button>
 
               <div className="absolute bottom-32 right-3 z-30 flex flex-col items-center gap-5 text-white">
                 <button className="flex flex-col items-center gap-1">
@@ -160,17 +237,6 @@ export const ShortsScreen = () => {
             </section>
           );
         })}
-      </div>
-
-      <div className="pointer-events-none absolute left-0 right-0 top-0 z-30 flex gap-1 px-3 pt-3 safe-top">
-        {shorts.map((_, i) => (
-          <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
-            <div
-              className="h-full bg-white transition-all duration-100"
-              style={{ width: i < activeIndex ? "100%" : i === activeIndex ? "100%" : "0%" }}
-            />
-          </div>
-        ))}
       </div>
 
       <UpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
