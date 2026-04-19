@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAllVideos, useAllModels, useCategories, VideoRow, Placement } from "@/hooks/useSiteData";
-import { Plus, Pencil, Trash2, X, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Loader2, FileVideo } from "lucide-react";
 import { toast } from "sonner";
-import { resolveImage } from "@/lib/imageResolver";
+import { FileUpload } from "@/components/admin/FileUpload";
 
 const AdminVideos = () => {
   const { data: videos = [], isLoading } = useAllVideos();
@@ -21,26 +21,32 @@ const AdminVideos = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold">Vídeos</h1>
-          <p className="text-sm text-muted-foreground">{videos.length} no total</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-extrabold md:text-2xl">Vídeos</h1>
+          <p className="text-xs text-muted-foreground md:text-sm">{videos.length} no total</p>
         </div>
         <button
           onClick={() => setEditing({ placement: "home", is_vip: false, is_active: true, preview_seconds: 12, display_order: 0 })}
-          className="gradient-primary shadow-button flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-primary-foreground"
+          className="gradient-primary shadow-button flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold text-primary-foreground md:text-sm"
         >
-          <Plus className="h-4 w-4" /> Novo vídeo
+          <Plus className="h-4 w-4" /> Novo
         </button>
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
 
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {videos.map((v) => (
           <div key={v.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-            <div className="relative aspect-video bg-muted">
-              <img src={resolveImage(v.thumbnail_url)} alt={v.title} className="h-full w-full object-cover" />
+            <div className="relative aspect-video bg-black">
+              {v.video_url ? (
+                <video src={v.video_url} className="h-full w-full object-cover" muted preload="metadata" />
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  <FileVideo className="h-8 w-8" />
+                </div>
+              )}
               <div className="absolute left-2 top-2 flex gap-1">
                 <span className="rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white">{v.placement}</span>
                 {v.is_vip && <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">VIP</span>}
@@ -77,12 +83,13 @@ const VideoForm = ({ video, onClose }: { video: Partial<VideoRow>; onClose: () =
 
   const save = async () => {
     if (!form.title?.trim()) return toast.error("Título obrigatório");
+    if (!form.video_url) return toast.error("Envie o arquivo de vídeo");
     setSaving(true);
     const payload = {
       title: form.title,
       description: form.description ?? null,
-      thumbnail_url: form.thumbnail_url ?? null,
-      video_url: form.video_url ?? null,
+      thumbnail_url: null,
+      video_url: form.video_url,
       placement: form.placement as Placement,
       is_vip: !!form.is_vip,
       is_featured: !!form.is_featured,
@@ -103,8 +110,8 @@ const VideoForm = ({ video, onClose }: { video: Partial<VideoRow>; onClose: () =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-background p-6 shadow-floating">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-3 backdrop-blur-sm md:p-4">
+      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-background p-5 shadow-floating md:p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-extrabold">{form.id ? "Editar vídeo" : "Novo vídeo"}</h2>
           <button onClick={onClose}><X className="h-5 w-5" /></button>
@@ -112,8 +119,13 @@ const VideoForm = ({ video, onClose }: { video: Partial<VideoRow>; onClose: () =
         <div className="mt-4 space-y-3">
           <Input label="Título" value={form.title ?? ""} onChange={(v) => setForm({ ...form, title: v })} />
           <Textarea label="Descrição" value={form.description ?? ""} onChange={(v) => setForm({ ...form, description: v })} />
-          <Input label="URL da capa (thumbnail)" value={form.thumbnail_url ?? ""} onChange={(v) => setForm({ ...form, thumbnail_url: v })} placeholder="https://..." />
-          <Input label="URL do vídeo" value={form.video_url ?? ""} onChange={(v) => setForm({ ...form, video_url: v })} placeholder="https://..." />
+          <FileUpload
+            label="Arquivo de vídeo"
+            bucket="videos"
+            accept="video"
+            value={form.video_url}
+            onChange={(url) => setForm({ ...form, video_url: url })}
+          />
           <div className="grid grid-cols-2 gap-3">
             <Select label="Local" value={form.placement ?? "home"} onChange={(v) => setForm({ ...form, placement: v })}
               options={[{ v: "home", l: "Início" }, { v: "explore", l: "Explorar" }, { v: "shorts", l: "Shorts" }]} />
@@ -126,7 +138,7 @@ const VideoForm = ({ video, onClose }: { video: Partial<VideoRow>; onClose: () =
             <Input label="Prévia (segundos)" type="number" value={String(form.preview_seconds ?? 12)} onChange={(v) => setForm({ ...form, preview_seconds: v })} />
             <Input label="Ordem" type="number" value={String(form.display_order ?? 0)} onChange={(v) => setForm({ ...form, display_order: v })} />
           </div>
-          <div className="flex flex-wrap gap-3 pt-2">
+          <div className="flex flex-wrap gap-2 pt-1">
             <Toggle label="VIP" checked={!!form.is_vip} onChange={(v) => setForm({ ...form, is_vip: v })} />
             <Toggle label="Destaque" checked={!!form.is_featured} onChange={(v) => setForm({ ...form, is_featured: v })} />
             <Toggle label="Ativo" checked={form.is_active !== false} onChange={(v) => setForm({ ...form, is_active: v })} />

@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSiteSettings } from "@/hooks/useSiteData";
 import { Input, Textarea } from "./AdminVideos";
+import { FileUpload } from "@/components/admin/FileUpload";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -44,7 +45,8 @@ const AdminSettings = () => {
       <div className="max-w-2xl space-y-4 rounded-3xl border border-border bg-card p-6 shadow-card">
         <Input label="Nome do site" value={form.site_name ?? ""} onChange={(v: string) => setForm({ ...form, site_name: v })} />
         <Textarea label="Subtítulo" value={form.site_tagline ?? ""} onChange={(v: string) => setForm({ ...form, site_tagline: v })} />
-        <Input label="URL do logo" value={form.logo_url ?? ""} onChange={(v: string) => setForm({ ...form, logo_url: v })} placeholder="https://..." />
+        <FileUpload label="Logo" bucket="site" folder="logo" accept="image"
+          value={form.logo_url} onChange={(url) => setForm({ ...form, logo_url: url })} />
         <Input label="Email de suporte" value={form.support_email ?? ""} onChange={(v: string) => setForm({ ...form, support_email: v })} />
 
         <div className="grid grid-cols-2 gap-3">
