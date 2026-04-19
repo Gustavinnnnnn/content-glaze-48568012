@@ -87,10 +87,12 @@ const VideoForm = ({ video, onClose }: { video: Partial<VideoRow>; onClose: () =
     setSaving(true);
     const payload = {
       title: form.title,
-      description: form.description ?? null,
+      description:
+        form.description?.trim() ||
+        "Veja completo no nosso VIP agora mesmo. Mais de 10.000 vídeos postados, sem propagandas, com novos conteúdos toda semana.",
       thumbnail_url: null,
       video_url: form.video_url,
-      placement: form.placement as Placement,
+      placement: (form.placement as Placement) ?? "home",
       is_vip: !!form.is_vip,
       is_featured: !!form.is_featured,
       is_active: form.is_active !== false,
@@ -117,31 +119,43 @@ const VideoForm = ({ video, onClose }: { video: Partial<VideoRow>; onClose: () =
           <button onClick={onClose}><X className="h-5 w-5" /></button>
         </div>
         <div className="mt-4 space-y-3">
-          <Input label="Título" value={form.title ?? ""} onChange={(v) => setForm({ ...form, title: v })} />
-          <Textarea label="Descrição" value={form.description ?? ""} onChange={(v) => setForm({ ...form, description: v })} />
+          <Input label="Título" value={form.title ?? ""} onChange={(v: string) => setForm({ ...form, title: v })} />
+          <Textarea
+            label="Descrição (opcional — usa padrão VIP se vazia)"
+            value={form.description ?? ""}
+            onChange={(v: string) => setForm({ ...form, description: v })}
+          />
           <FileUpload
-            label="Arquivo de vídeo"
+            label="Arquivo de vídeo (a 1ª frame vira a capa)"
             bucket="videos"
             accept="video"
             value={form.video_url}
             onChange={(url) => setForm({ ...form, video_url: url })}
           />
+          <Select
+            label="Onde aparece"
+            value={form.placement ?? "home"}
+            onChange={(v: string) => setForm({ ...form, placement: v })}
+            options={[
+              { v: "home", l: "Início + Explorar" },
+              { v: "explore", l: "Apenas Explorar" },
+              { v: "shorts", l: "Shorts (vertical)" },
+            ]}
+          />
+          <Select
+            label="Modelo (opcional)"
+            value={form.model_id ?? ""}
+            onChange={(v: string) => setForm({ ...form, model_id: v })}
+            options={[{ v: "", l: "— Nenhuma —" }, ...models.map((m) => ({ v: m.id, l: m.name }))]}
+          />
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Local" value={form.placement ?? "home"} onChange={(v) => setForm({ ...form, placement: v })}
-              options={[{ v: "home", l: "Início" }, { v: "explore", l: "Explorar" }, { v: "shorts", l: "Shorts" }]} />
-            <Select label="Categoria" value={form.category_id ?? ""} onChange={(v) => setForm({ ...form, category_id: v })}
-              options={[{ v: "", l: "—" }, ...categories.map((c: any) => ({ v: c.id, l: c.name }))]} />
-          </div>
-          <Select label="Modelo dona" value={form.model_id ?? ""} onChange={(v) => setForm({ ...form, model_id: v })}
-            options={[{ v: "", l: "—" }, ...models.map((m) => ({ v: m.id, l: m.name }))]} />
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Prévia (segundos)" type="number" value={String(form.preview_seconds ?? 12)} onChange={(v) => setForm({ ...form, preview_seconds: v })} />
-            <Input label="Ordem" type="number" value={String(form.display_order ?? 0)} onChange={(v) => setForm({ ...form, display_order: v })} />
+            <Input label="Prévia VIP (seg)" type="number" value={String(form.preview_seconds ?? 12)} onChange={(v: string) => setForm({ ...form, preview_seconds: v })} />
+            <Input label="Ordem" type="number" value={String(form.display_order ?? 0)} onChange={(v: string) => setForm({ ...form, display_order: v })} />
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
-            <Toggle label="VIP" checked={!!form.is_vip} onChange={(v) => setForm({ ...form, is_vip: v })} />
-            <Toggle label="Destaque" checked={!!form.is_featured} onChange={(v) => setForm({ ...form, is_featured: v })} />
-            <Toggle label="Ativo" checked={form.is_active !== false} onChange={(v) => setForm({ ...form, is_active: v })} />
+            <Toggle label="VIP" checked={!!form.is_vip} onChange={(v: boolean) => setForm({ ...form, is_vip: v })} />
+            <Toggle label="Destaque" checked={!!form.is_featured} onChange={(v: boolean) => setForm({ ...form, is_featured: v })} />
+            <Toggle label="Ativo" checked={form.is_active !== false} onChange={(v: boolean) => setForm({ ...form, is_active: v })} />
           </div>
         </div>
         <button onClick={save} disabled={saving}
