@@ -66,7 +66,7 @@ export const HomeScreen = () => {
       </header>
 
       <div className="space-y-5 pb-4 pt-4">
-        {/* Models grid — Privacy-style */}
+        {/* Models grid — Privacy-style (no overlapping avatar bug) */}
         {filtered.length > 0 && (
           <section className="px-3">
             <div className="grid grid-cols-2 gap-2.5">
@@ -88,37 +88,29 @@ export const HomeScreen = () => {
                         loading="lazy"
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0" />
 
                       {/* Online dot */}
                       <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-0.5 backdrop-blur-sm">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                         <span className="text-[8px] font-bold uppercase tracking-wider text-white">Online</span>
                       </div>
 
-                      {/* Avatar overlay */}
-                      <div className="absolute -bottom-5 left-2.5">
-                        <div className="rounded-full bg-card p-[2px] shadow-card">
-                          <img
-                            src={resolveImage(m.avatar_url ?? m.cover_url)}
-                            alt={m.name}
-                            className="h-10 w-10 rounded-full object-cover"
-                          />
+                      {/* Name overlay on cover */}
+                      <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-6 text-white">
+                        <div className="flex items-center gap-1">
+                          <p className="truncate text-[12px] font-extrabold leading-tight drop-shadow">{m.name}</p>
+                          <BadgeCheck className="h-3 w-3 shrink-0 text-primary-glow drop-shadow" />
                         </div>
+                        <p className="truncate text-[10px] font-semibold opacity-90">@{m.handle}</p>
                       </div>
                     </div>
 
-                    {/* Info */}
-                    <div className="flex flex-1 flex-col px-2.5 pb-2.5 pt-6">
-                      <div className="flex items-center gap-1">
-                        <p className="truncate text-[12px] font-extrabold leading-tight">{m.name}</p>
-                        <BadgeCheck className="h-3 w-3 shrink-0 text-primary" />
-                      </div>
-                      <p className="truncate text-[10px] font-semibold text-muted-foreground">@{m.handle}</p>
-
-                      <div className="mt-1.5 flex items-center gap-2 text-[9px] font-semibold text-muted-foreground">
-                        <span className="flex items-center gap-0.5">
-                          <ImageIcon className="h-2.5 w-2.5" /> {posts}
+                    {/* Info / CTA */}
+                    <div className="flex flex-col px-2.5 py-2">
+                      <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <ImageIcon className="h-2.5 w-2.5" /> {posts} posts
                         </span>
                         <span className="flex items-center gap-0.5">
                           <Heart className="h-2.5 w-2.5" /> {(posts * 47 + 213).toLocaleString("pt-BR")}
