@@ -79,6 +79,8 @@ export const ShortsScreen = () => {
             return (
               <section
                 key={item.id}
+                ref={(el) => { sectionRefs.current[i] = el; }}
+                data-idx={i}
                 className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden bg-gradient-to-br from-[hsl(20_95%_55%)] via-[hsl(15_92%_50%)] to-[hsl(0_85%_48%)] text-white"
               >
                 <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
