@@ -3,6 +3,7 @@ import { Crown, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useModels } from "@/hooks/useSiteData";
 import { resolveImage } from "@/lib/imageResolver";
+import { VipHeroBanner } from "@/components/VipHeroBanner";
 
 export const ModelsScreen = () => {
   const { openModel } = useNav();
@@ -41,6 +42,8 @@ export const ModelsScreen = () => {
           />
         </div>
       </header>
+
+      <VipHeroBanner headline="Acesse TODAS as modelos com 1 pagamento" subline="Sem assinar uma por uma. Libere o catálogo completo agora." />
 
       {models.length > 0 && (
         <section className="px-4 pt-4">
