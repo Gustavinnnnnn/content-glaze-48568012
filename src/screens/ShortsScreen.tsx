@@ -129,17 +129,21 @@ export const ShortsScreen = () => {
           return (
             <section
               key={s.id + "-" + i}
-              className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden"
+              ref={(el) => { sectionRefs.current[i] = el; }}
+              data-idx={i}
+              className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden bg-black"
             >
-              {s.video_url ? (
+              {s.video_url && Math.abs(i - activeIndex) <= 1 ? (
                 <video
+                  key={s.id + "-v-" + i}
                   data-short=""
                   data-index={i}
                   src={s.video_url}
                   loop
                   playsInline
-                  muted={muted}
-                  preload="auto"
+                  muted={i === activeIndex ? muted : true}
+                  preload={i === activeIndex ? "auto" : "metadata"}
+                  autoPlay={i === activeIndex}
                   className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`}
                   onClick={() => setMuted((m) => !m)}
                   onLoadedData={(e) => {
@@ -152,7 +156,11 @@ export const ShortsScreen = () => {
                   }}
                 />
               ) : (
-                <div className="h-full w-full bg-neutral-900" />
+                s.thumbnail_url ? (
+                  <img src={s.thumbnail_url} alt={s.title} className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`} />
+                ) : (
+                  <div className="h-full w-full bg-neutral-900" />
+                )
               )}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/40" />
 
