@@ -6,14 +6,14 @@
 
 @layer base {
   :root {
-    --background: 40 30% 98%;
-    --foreground: 24 14% 12%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 24 14% 12%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 24 14% 12%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 98%;
 
     /* Vibrant Orange — brand */
     --primary: 18 100% 55%;
@@ -21,20 +21,20 @@
     --primary-glow: 25 100% 62%;
     --primary-soft: 22 100% 96%;
 
-    --secondary: 30 15% 96%;
-    --secondary-foreground: 24 14% 16%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 30 12% 94%;
-    --muted-foreground: 24 8% 46%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 22 100% 96%;
-    --accent-foreground: 18 100% 45%;
+    --accent: 18 60% 16%;
+    --accent-foreground: 18 100% 70%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 15% 90%;
-    --input: 30 15% 90%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
     --ring: 18 100% 55%;
 
     --radius: 1.25rem;
@@ -102,7 +102,7 @@
   .shadow-button { box-shadow: var(--shadow-button); }
 
   .glass {
-    background: hsl(0 0% 100% / 0.75);
+    background: hsl(0 0% 8% / 0.75);
     backdrop-filter: blur(20px) saturate(1.4);
     -webkit-backdrop-filter: blur(20px) saturate(1.4);
   }

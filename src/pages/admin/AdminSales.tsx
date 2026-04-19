@@ -15,11 +15,18 @@ const AdminSales = () => {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["admin-orders", filter],
     queryFn: async () => {
-      let q = supabase.from("orders").select("*, profiles!inner(display_name, email)").order("created_at", { ascending: false }).limit(200);
+      let q = supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(200);
       if (filter !== "all") q = q.eq("status", filter);
       const { data, error } = await q;
       if (error) throw error;
-      return data ?? [];
+      const userIds = Array.from(new Set((data ?? []).map((o) => o.user_id)));
+      if (userIds.length === 0) return [];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, email")
+        .in("user_id", userIds);
+      const map = new Map(profiles?.map((p) => [p.user_id, p]) ?? []);
+      return (data ?? []).map((o) => ({ ...o, profiles: map.get(o.user_id) ?? null }));
     },
   });
 
