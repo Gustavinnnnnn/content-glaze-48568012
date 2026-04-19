@@ -227,7 +227,7 @@ export const useActivateVip = () => {
       if (!user) throw new Error("Você precisa entrar primeiro");
       const settings = await supabase.from("site_settings").select("*").limit(1).maybeSingle();
       const days = settings.data?.vip_duration_days ?? 30;
-      const price = settings.data?.vip_monthly_price ?? 49.9;
+      const price = settings.data?.vip_monthly_price ?? 19.9;
       const expires = new Date();
       expires.setDate(expires.getDate() + days);
 

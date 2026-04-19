@@ -33,7 +33,7 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
     setPixOpen(true);
   };
 
-  const price = settings?.vip_monthly_price ?? 49.9;
+  const price = settings?.vip_monthly_price ?? 19.9;
   const days = settings?.vip_duration_days ?? 30;
 
   return (

@@ -6,7 +6,7 @@ import { useSiteSettings } from "@/hooks/useSiteData";
 export const VipPromoBanner = ({ compact = false }: { compact?: boolean }) => {
   const [open, setOpen] = useState(false);
   const { data: settings } = useSiteSettings();
-  const price = settings?.vip_monthly_price ?? 49.9;
+  const price = settings?.vip_monthly_price ?? 19.9;
 
   return (
     <>
