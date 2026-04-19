@@ -15,6 +15,7 @@ export const ShortsScreen = () => {
   const { vip } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   
+  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [paywallDismissed, setPaywallDismissed] = useState<Record<number, boolean>>({});
@@ -34,34 +35,33 @@ export const ShortsScreen = () => {
     return items;
   }, [shorts, vip.isVip]);
 
+  // Use IntersectionObserver to reliably detect which section is on screen.
+  // Only the active section mounts a <video>; siblings unmount entirely → no ghost playback/audio.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const onScroll = () => {
-      const idx = Math.round(el.scrollTop / el.clientHeight);
-      if (idx !== activeIndex) setActiveIndex(idx);
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [activeIndex]);
+    const sections = sectionRefs.current.filter(Boolean) as HTMLElement[];
+    if (sections.length === 0) return;
 
-  // Play active, pause others. Re-query DOM each time so we always see the latest <video> nodes.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const videos = el.querySelectorAll<HTMLVideoElement>("video[data-short]");
-    videos.forEach((v) => {
-      const idx = Number(v.dataset.index);
-      if (idx === activeIndex) {
-        v.muted = muted;
-        const p = v.play();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-      } else {
-        v.pause();
-        if (v.currentTime > 0.1) v.currentTime = 0;
-      }
-    });
-  }, [activeIndex, feed.length, muted]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the entry with the highest intersection ratio that is >= 0.6
+        let best: IntersectionObserverEntry | null = null;
+        for (const e of entries) {
+          if (e.intersectionRatio >= 0.6 && (!best || e.intersectionRatio > best.intersectionRatio)) {
+            best = e;
+          }
+        }
+        if (best) {
+          const idx = Number((best.target as HTMLElement).dataset.idx);
+          if (!Number.isNaN(idx)) setActiveIndex(idx);
+        }
+      },
+      { root: el, threshold: [0.6, 0.9] }
+    );
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, [feed.length]);
 
   if (feed.length === 0) {
     return (
@@ -79,6 +79,8 @@ export const ShortsScreen = () => {
             return (
               <section
                 key={item.id}
+                ref={(el) => { sectionRefs.current[i] = el; }}
+                data-idx={i}
                 className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden bg-gradient-to-br from-[hsl(20_95%_55%)] via-[hsl(15_92%_50%)] to-[hsl(0_85%_48%)] text-white"
               >
                 <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
@@ -127,17 +129,21 @@ export const ShortsScreen = () => {
           return (
             <section
               key={s.id + "-" + i}
-              className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden"
+              ref={(el) => { sectionRefs.current[i] = el; }}
+              data-idx={i}
+              className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden bg-black"
             >
-              {s.video_url ? (
+              {s.video_url && Math.abs(i - activeIndex) <= 1 ? (
                 <video
+                  key={s.id + "-v-" + i}
                   data-short=""
                   data-index={i}
                   src={s.video_url}
                   loop
                   playsInline
-                  muted={muted}
-                  preload="auto"
+                  muted={i === activeIndex ? muted : true}
+                  preload={i === activeIndex ? "auto" : "metadata"}
+                  autoPlay={i === activeIndex}
                   className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`}
                   onClick={() => setMuted((m) => !m)}
                   onLoadedData={(e) => {
@@ -150,7 +156,11 @@ export const ShortsScreen = () => {
                   }}
                 />
               ) : (
-                <div className="h-full w-full bg-neutral-900" />
+                s.thumbnail_url ? (
+                  <img src={s.thumbnail_url} alt={s.title} className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`} />
+                ) : (
+                  <div className="h-full w-full bg-neutral-900" />
+                )
               )}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/40" />
 
