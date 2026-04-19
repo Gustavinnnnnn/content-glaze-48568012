@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Bot, CheckCircle2, XCircle, RefreshCw, Send, Plus, Trash2, MessageSquare, Bell } from "lucide-react";
+import { Bot, CheckCircle2, XCircle, RefreshCw, Send, Plus, Trash2, MessageSquare, Bell, ExternalLink } from "lucide-react";
 
 type Cfg = {
   id: number;
@@ -25,15 +25,18 @@ type Cfg = {
   notify_on_new_user: boolean;
   notify_on_new_vip: boolean;
   admin_chat_ids: any;
+  mini_app_url: string | null;
   last_polled_at: string | null;
 };
+
+const DEFAULT_SITE_URL = typeof window !== "undefined" ? window.location.origin : "";
 
 const AdminTelegram = () => {
   const [cfg, setCfg] = useState<Cfg | null>(null);
   const [loading, setLoading] = useState(true);
   const [tokenInput, setTokenInput] = useState("");
+  const [miniAppInput, setMiniAppInput] = useState(DEFAULT_SITE_URL);
   const [verifying, setVerifying] = useState(false);
-  const [polling, setPolling] = useState(false);
   const [newAdminId, setNewAdminId] = useState("");
   const [users, setUsers] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
@@ -49,6 +52,7 @@ const AdminTelegram = () => {
       supabase.from("telegram_notifications").select("*").order("created_at", { ascending: false }).limit(30),
     ]);
     setCfg(c as any);
+    if ((c as any)?.mini_app_url) setMiniAppInput((c as any).mini_app_url);
     setUsers(u || []);
     setMessages(m || []);
     setNotifications(n || []);
@@ -56,6 +60,16 @@ const AdminTelegram = () => {
   };
 
   useEffect(() => { load(); }, []);
+
+  // realtime updates for incoming messages
+  useEffect(() => {
+    const ch = supabase
+      .channel("telegram-admin")
+      .on("postgres_changes", { event: "*", schema: "public", table: "telegram_messages" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "telegram_users" }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
 
   const callBot = async (action: string, body: any = {}) => {
     const { data, error } = await supabase.functions.invoke("telegram-bot", { body: { action, ...body } });
@@ -66,10 +80,11 @@ const AdminTelegram = () => {
 
   const verifyToken = async () => {
     if (!tokenInput.trim()) { toast.error("Cole o token do BotFather"); return; }
+    if (!miniAppInput.trim()) { toast.error("Informe a URL do site (Mini App)"); return; }
     setVerifying(true);
     try {
-      const res = await callBot("verify", { token: tokenInput.trim() });
-      toast.success(`Bot conectado: @${res.bot.username}`);
+      const res = await callBot("verify", { token: tokenInput.trim(), mini_app_url: miniAppInput.trim() });
+      toast.success(`Bot @${res.bot.username} conectado! Webhook ativo.`);
       setTokenInput("");
       await load();
     } catch (e: any) { toast.error(e.message); }
@@ -89,8 +104,9 @@ const AdminTelegram = () => {
       vip_welcome_message: cfg.vip_welcome_message,
       vip_channel_id: cfg.vip_channel_id,
       vip_channel_invite_link: cfg.vip_channel_invite_link,
+      mini_app_url: cfg.mini_app_url,
     });
-    toast.success("Configurações salvas");
+    toast.success("Configurações salvas. Mande /start no bot pra ver os botões atualizados.");
   };
 
   const addAdmin = async () => {
@@ -109,32 +125,30 @@ const AdminTelegram = () => {
     await updateField({ admin_chat_ids: list });
   };
 
-  const poll = async () => {
-    setPolling(true);
+  const checkWebhook = async () => {
     try {
-      const r = await callBot("poll");
-      toast.success(`${r.processed} mensagens processadas`);
-      await load();
+      const r = await callBot("webhook_info");
+      const i = r.info;
+      if (i.url) toast.success(`Webhook OK · pendentes: ${i.pending_update_count}`);
+      else toast.error("Webhook não registrado");
     } catch (e: any) { toast.error(e.message); }
-    finally { setPolling(false); }
+  };
+
+  const disconnect = async () => {
+    if (!confirm("Desconectar bot? O webhook será removido.")) return;
+    try { await callBot("disconnect"); toast.success("Desconectado"); await load(); }
+    catch (e: any) { toast.error(e.message); }
   };
 
   const processNotifs = async () => {
-    try {
-      const r = await callBot("process_notifications");
-      toast.success(`${r.processed} notificações enviadas`);
-      await load();
-    } catch (e: any) { toast.error(e.message); }
+    try { const r = await callBot("process_notifications"); toast.success(`${r.processed} enviadas`); await load(); }
+    catch (e: any) { toast.error(e.message); }
   };
 
   const sendMessage = async () => {
     if (!sendChatId || !sendText) { toast.error("Preencha chat e mensagem"); return; }
-    try {
-      await callBot("send", { chat_id: Number(sendChatId), text: sendText });
-      toast.success("Enviado");
-      setSendText("");
-      await load();
-    } catch (e: any) { toast.error(e.message); }
+    try { await callBot("send", { chat_id: Number(sendChatId), text: sendText }); toast.success("Enviado"); setSendText(""); await load(); }
+    catch (e: any) { toast.error(e.message); }
   };
 
   if (loading) return <div className="text-sm text-muted-foreground">Carregando…</div>;
@@ -143,18 +157,20 @@ const AdminTelegram = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Bot className="h-6 w-6 text-primary" />
         <h1 className="text-xl font-extrabold md:text-2xl">Telegram Bot</h1>
-        {isConnected ? (
-          <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15">
-            <CheckCircle2 className="mr-1 h-3 w-3" /> Conectado
-          </Badge>
-        ) : (
-          <Badge variant="secondary">
-            <XCircle className="mr-1 h-3 w-3" /> Desconectado
-          </Badge>
-        )}
+        <span>
+          {isConnected ? (
+            <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15">
+              <CheckCircle2 className="mr-1 h-3 w-3" /> Conectado
+            </Badge>
+          ) : (
+            <Badge variant="secondary">
+              <XCircle className="mr-1 h-3 w-3" /> Desconectado
+            </Badge>
+          )}
+        </span>
       </div>
 
       {!isConnected && (
@@ -162,26 +178,39 @@ const AdminTelegram = () => {
           <CardHeader>
             <CardTitle className="text-base">Conectar bot</CardTitle>
             <CardDescription>
-              1. Abra o <a className="underline" href="https://t.me/BotFather" target="_blank" rel="noreferrer">@BotFather</a> no Telegram.<br/>
-              2. Envie <code>/newbot</code> e siga as instruções.<br/>
-              3. Cole o token aqui:
+              1. Abra o <a className="underline" href="https://t.me/BotFather" target="_blank" rel="noreferrer">@BotFather</a> e envie <code>/newbot</code>.<br/>
+              2. Cole o token e a URL do seu site abaixo. Conexão é automática (via webhook).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Input
-              placeholder="123456789:ABCdefGHI..."
-              value={tokenInput}
-              onChange={(e) => setTokenInput(e.target.value)}
-              type="password"
-            />
+            <div>
+              <Label>Token do bot</Label>
+              <Input
+                placeholder="123456789:ABCdefGHI..."
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                type="password"
+              />
+            </div>
+            <div>
+              <Label>URL do site (Mini App)</Label>
+              <Input
+                placeholder="https://seusite.com"
+                value={miniAppInput}
+                onChange={(e) => setMiniAppInput(e.target.value)}
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Esta URL abre dentro do Telegram quando o usuário clica nos botões. Use uma URL pública (https) — o domínio do preview funciona pra teste.
+              </p>
+            </div>
             <Button onClick={verifyToken} disabled={verifying} className="w-full sm:w-auto">
-              {verifying ? "Verificando…" : "Conectar bot"}
+              {verifying ? "Conectando…" : "Conectar bot"}
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {isConnected && (
+      {isConnected && cfg && (
         <Tabs defaultValue="settings" className="space-y-4">
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="settings">Config</TabsTrigger>
@@ -191,26 +220,45 @@ const AdminTelegram = () => {
             <TabsTrigger value="users">Usuários</TabsTrigger>
           </TabsList>
 
-          {/* SETTINGS */}
           <TabsContent value="settings" className="space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Bot conectado</CardTitle>
+                <CardTitle className="text-base">Bot ativo</CardTitle>
                 <CardDescription>
-                  @{cfg.bot_username} • {cfg.bot_name}
+                  <a href={`https://t.me/${cfg.bot_username}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                    @{cfg.bot_username} <ExternalLink className="h-3 w-3" />
+                  </a> · {cfg.bot_name}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Switch
-                    checked={cfg.is_active}
-                    onCheckedChange={(v) => updateField({ is_active: v })}
-                  />
+                  <Switch checked={cfg.is_active} onCheckedChange={(v) => updateField({ is_active: v })} />
                   <span className="text-sm">Bot ativo</span>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => { setTokenInput(""); updateField({ is_active: false, bot_token: null }); }}>
-                  Desconectar bot
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={checkWebhook}>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Status webhook
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={disconnect}>Desconectar</Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3"><CardTitle className="text-base">Mini App (site dentro do bot)</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label>URL do seu site</Label>
+                  <Input
+                    placeholder="https://seusite.com"
+                    value={cfg.mini_app_url || ""}
+                    onChange={(e) => setCfg({ ...cfg, mini_app_url: e.target.value })}
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Use HTTPS. O Telegram só abre Mini Apps em domínios seguros.
+                  </p>
+                </div>
+                <Button onClick={saveSettings} className="w-full sm:w-auto">Salvar</Button>
               </CardContent>
             </Card>
 
@@ -218,20 +266,13 @@ const AdminTelegram = () => {
               <CardHeader className="pb-3"><CardTitle className="text-base">Mensagens automáticas</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <Label>Boas-vindas (/start)</Label>
+                  <Label>Mensagem de boas-vindas (/start)</Label>
                   <Textarea
                     rows={3}
                     value={cfg.welcome_message || ""}
                     onChange={(e) => setCfg({ ...cfg, welcome_message: e.target.value })}
                   />
-                </div>
-                <div>
-                  <Label>Boas-vindas para novo VIP</Label>
-                  <Textarea
-                    rows={3}
-                    value={cfg.vip_welcome_message || ""}
-                    onChange={(e) => setCfg({ ...cfg, vip_welcome_message: e.target.value })}
-                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">Os botões aparecem automaticamente abaixo da mensagem.</p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -243,7 +284,7 @@ const AdminTelegram = () => {
                     />
                   </div>
                   <div>
-                    <Label>Link de convite VIP</Label>
+                    <Label>Link do canal VIP</Label>
                     <Input
                       placeholder="https://t.me/+abc..."
                       value={cfg.vip_channel_invite_link || ""}
@@ -278,23 +319,17 @@ const AdminTelegram = () => {
             </Card>
           </TabsContent>
 
-          {/* ADMINS */}
           <TabsContent value="admins" className="space-y-3">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Admins do bot</CardTitle>
                 <CardDescription>
-                  Chat IDs que recebem notificações. Para descobrir seu ID, mande <code>/start</code> ao seu bot e veja na aba "Usuários".
+                  Chat IDs que recebem notificações. Mande <code>/start</code> ao seu bot e veja seu ID na aba "Usuários".
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex gap-2">
-                  <Input
-                    placeholder="Chat ID numérico"
-                    value={newAdminId}
-                    onChange={(e) => setNewAdminId(e.target.value)}
-                    inputMode="numeric"
-                  />
+                  <Input placeholder="Chat ID numérico" value={newAdminId} onChange={(e) => setNewAdminId(e.target.value)} inputMode="numeric" />
                   <Button onClick={addAdmin}><Plus className="h-4 w-4" /></Button>
                 </div>
                 <div className="space-y-2">
@@ -314,17 +349,11 @@ const AdminTelegram = () => {
             </Card>
           </TabsContent>
 
-          {/* MESSAGES */}
           <TabsContent value="messages" className="space-y-3">
             <Card>
-              <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">Mensagens recentes</CardTitle>
-                <Button onClick={poll} disabled={polling} size="sm" variant="outline">
-                  <RefreshCw className={`mr-2 h-4 w-4 ${polling ? "animate-spin" : ""}`} /> Buscar
-                </Button>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-base">Mensagens recentes (atualiza em tempo real)</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                {messages.length === 0 && <p className="text-xs text-muted-foreground">Sem mensagens ainda.</p>}
+                {messages.length === 0 && <p className="text-xs text-muted-foreground">Sem mensagens ainda. Mande /start ao bot.</p>}
                 {messages.map((m) => (
                   <div key={m.id} className={`rounded-lg border p-2.5 text-sm ${m.direction === "incoming" ? "border-border bg-muted/30" : "border-primary/30 bg-primary/5"}`}>
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground">
@@ -347,13 +376,9 @@ const AdminTelegram = () => {
             </Card>
           </TabsContent>
 
-          {/* NOTIFICATIONS */}
           <TabsContent value="notifications" className="space-y-3">
             <Card>
-              <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">Fila de notificações</CardTitle>
-                <Button onClick={processNotifs} size="sm" variant="outline"><Bell className="mr-2 h-4 w-4" /> Processar</Button>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-base">Fila de notificações</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 {notifications.length === 0 && <p className="text-xs text-muted-foreground">Vazio.</p>}
                 {notifications.map((n) => (
@@ -362,21 +387,25 @@ const AdminTelegram = () => {
                       <div className="font-semibold">{n.event_type}</div>
                       <div className="text-[10px] text-muted-foreground">{new Date(n.created_at).toLocaleString("pt-BR")}</div>
                     </div>
-                    <Badge variant={n.status === "sent" ? "default" : n.status === "failed" ? "destructive" : "secondary"}>
-                      {n.status}
-                    </Badge>
+                    <span>
+                      <Badge variant={n.status === "sent" ? "default" : n.status === "failed" ? "destructive" : "secondary"}>
+                        {n.status}
+                      </Badge>
+                    </span>
                   </div>
                 ))}
+                <Button onClick={processNotifs} size="sm" variant="outline" className="w-full sm:w-auto">
+                  <Bell className="mr-2 h-4 w-4" /> Processar pendentes
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* USERS */}
           <TabsContent value="users" className="space-y-3">
             <Card>
               <CardHeader className="pb-3"><CardTitle className="text-base">Quem conversou com o bot</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                {users.length === 0 && <p className="text-xs text-muted-foreground">Ninguém ainda. Mande <code>/start</code> ao seu bot e clique em "Buscar" na aba Mensagens.</p>}
+                {users.length === 0 && <p className="text-xs text-muted-foreground">Ninguém ainda. Mande /start ao seu bot.</p>}
                 {users.map((u) => (
                   <div key={u.id} className="rounded-lg border border-border p-2.5">
                     <div className="flex items-center justify-between gap-2">
@@ -386,11 +415,7 @@ const AdminTelegram = () => {
                         </div>
                         <code className="text-[10px] text-muted-foreground">chat {u.chat_id}</code>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => { setSendChatId(String(u.chat_id)); toast.info("Chat selecionado, vá na aba Mensagens"); }}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => { setSendChatId(String(u.chat_id)); toast.info("Chat selecionado, vá na aba Mensagens"); }}>
                         <MessageSquare className="h-3.5 w-3.5" />
                       </Button>
                     </div>
