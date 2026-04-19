@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Crown, Loader2, Mail, Lock, Sparkles } from "lucide-react";
+import { Crown, Loader2, Mail, Lock, Sparkles, User } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 
@@ -10,9 +10,17 @@ const signInSchema = z.object({
   password: z.string().min(6, "Senha precisa ter ao menos 6 caracteres").max(72),
 });
 
+const signUpSchema = signInSchema.extend({
+  displayName: z.string().trim().min(2, "Informe seu nome").max(60),
+});
+
+type Mode = "signin" | "signup";
+
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, signIn, signUp } = useAuth();
+  const [mode, setMode] = useState<Mode>("signup");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -25,7 +33,8 @@ const Auth = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
-    const parsed = signInSchema.safeParse({ email, password });
+    const schema = mode === "signup" ? signUpSchema : signInSchema;
+    const parsed = schema.safeParse({ email, password, displayName: name });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
       parsed.error.errors.forEach((err) => {
@@ -35,17 +44,27 @@ const Auth = () => {
       return;
     }
     setSubmitting(true);
-    const result = await signIn(email, password);
+    const result =
+      mode === "signup"
+        ? await signUp(email, password, name)
+        : await signIn(email, password);
     setSubmitting(false);
     if (result.error) {
+      const msg = result.error;
       toast.error(
-        result.error.includes("Invalid login")
+        msg.includes("Invalid login")
           ? "Email ou senha incorretos."
-          : result.error
+          : msg.includes("already registered") || msg.includes("already exists")
+          ? "Este email já está cadastrado. Faça login."
+          : msg
       );
       return;
     }
-    toast.success("Bem-vindo de volta!");
+    if (mode === "signup") {
+      toast.success("Conta criada!", { description: "Bem-vindo." });
+    } else {
+      toast.success("Bem-vindo de volta!");
+    }
     navigate("/", { replace: true });
   };
 
@@ -59,14 +78,56 @@ const Auth = () => {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl gradient-primary shadow-glow">
             <Crown className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Acesso restrito</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Entre com suas credenciais</p>
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">
+            {mode === "signup" ? "Criar conta" : "Bem-vindo"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {mode === "signup"
+              ? "Crie sua conta para acessar e comprar"
+              : "Entre com suas credenciais"}
+          </p>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-2 rounded-full bg-secondary p-1">
+          <button
+            type="button"
+            onClick={() => setMode("signup")}
+            className={`rounded-full py-2.5 text-xs font-bold transition-all ${
+              mode === "signup"
+                ? "gradient-primary text-primary-foreground shadow-button"
+                : "text-muted-foreground"
+            }`}
+          >
+            Criar conta
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("signin")}
+            className={`rounded-full py-2.5 text-xs font-bold transition-all ${
+              mode === "signin"
+                ? "gradient-primary text-primary-foreground shadow-button"
+                : "text-muted-foreground"
+            }`}
+          >
+            Entrar
+          </button>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="mt-8 space-y-4 rounded-3xl border border-border bg-card p-6 shadow-floating"
+          className="mt-4 space-y-4 rounded-3xl border border-border bg-card p-6 shadow-floating"
         >
+          {mode === "signup" && (
+            <Field
+              icon={<User className="h-4 w-4" />}
+              label="Nome"
+              value={name}
+              onChange={setName}
+              placeholder="Como prefere ser chamado"
+              error={errors.displayName}
+              autoComplete="name"
+            />
+          )}
           <Field
             icon={<Mail className="h-4 w-4" />}
             label="Email"
@@ -83,9 +144,9 @@ const Auth = () => {
             type="password"
             value={password}
             onChange={setPassword}
-            placeholder="Sua senha"
+            placeholder={mode === "signup" ? "Mínimo 6 caracteres" : "Sua senha"}
             error={errors.password}
-            autoComplete="current-password"
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
           />
 
           <button
@@ -98,11 +159,21 @@ const Auth = () => {
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                Entrar
+                {mode === "signup" ? "Criar minha conta" : "Entrar"}
               </>
             )}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-[11px] text-muted-foreground">
+          É administrador?{" "}
+          <button
+            onClick={() => navigate("/admin/login")}
+            className="font-bold text-primary hover:underline"
+          >
+            Acesso ao painel →
+          </button>
+        </p>
       </div>
     </div>
   );

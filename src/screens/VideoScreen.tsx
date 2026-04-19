@@ -6,6 +6,7 @@ import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { ContentCard } from "@/components/ContentCard";
 import { VipPromoBanner } from "@/components/VipPromoBanner";
 import { useVideo, useVideos, recordView } from "@/hooks/useSiteData";
+import { displayViews, formatViews } from "@/lib/displayViews";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_DESCRIPTION =
@@ -154,7 +155,7 @@ export const VideoScreen = ({ id }: { id: string }) => {
           <h1 className="mt-1 text-xl font-extrabold leading-tight">{item.title}</h1>
           <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Eye className="h-3.5 w-3.5" /> {item.view_count.toLocaleString("pt-BR")} visualizações
+              <Eye className="h-3.5 w-3.5" /> {formatViews(displayViews(item.id, item.view_count))} visualizações
             </span>
             <span>•</span>
             <span>{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>

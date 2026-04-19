@@ -8,6 +8,7 @@ import { NavProvider } from "@/contexts/NavContext";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
+import AdminLogin from "./pages/AdminLogin.tsx";
 import AdminLayout from "./pages/admin/AdminLayout.tsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminVideos from "./pages/admin/AdminVideos.tsx";
@@ -31,8 +32,8 @@ const RequireAdmin = ({
 }) => {
   const { loading, user, isAdmin, isSuperAdmin, permissions } = useAuth();
   if (loading) return <div className="flex h-[100dvh] items-center justify-center text-sm text-muted-foreground">Carregando…</div>;
-  if (!user) return <Navigate to="/auth" replace />;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!user) return <Navigate to="/admin/login" replace />;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
   if (permission && !isSuperAdmin && !permissions?.[permission]) return <Navigate to="/admin" replace />;
   return <>{children}</>;
 };
@@ -47,6 +48,7 @@ const App = () => (
           <NavProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/" element={<Index />} />
               <Route path="/admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
                 <Route index element={<RequireAdmin permission="can_view_dashboard"><AdminDashboard /></RequireAdmin>} />

@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
-import { Crown, Sparkles, X } from "lucide-react";
+import { Crown, Flame, X, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeDialog } from "./UpgradeDialog";
+import { useSiteSettings } from "@/hooks/useSiteData";
 
 const STORAGE_KEY = "vip-promo-last-shown";
-const COOLDOWN_MS = 1000 * 60 * 8; // 8 min between popups
-const FIRST_DELAY_MS = 25_000; // 25s after entering site
+const COOLDOWN_MS = 1000 * 60 * 8;
+const FIRST_DELAY_MS = 25_000;
 
-/**
- * Random VIP promotional pop-up — surfaces while the user browses to push the VIP.
- * Skips if the user already has VIP.
- */
 export const VipPromoModal = () => {
   const { vip } = useAuth();
+  const { data: settings } = useSiteSettings();
   const [open, setOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
@@ -27,47 +25,78 @@ export const VipPromoModal = () => {
     return () => clearTimeout(t);
   }, [vip.isVip]);
 
-  if (!open) return <UpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />;
+  const price = settings?.vip_monthly_price ?? 49.9;
+  const days = settings?.vip_duration_days ?? 30;
+
+  if (!open)
+    return <UpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />;
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/60 backdrop-blur-sm sm:items-center">
-        <div className="relative mx-3 mb-3 w-full max-w-sm overflow-hidden rounded-3xl bg-background shadow-floating animate-fade-in sm:mb-0">
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/70 backdrop-blur-md p-4 animate-fade-in"
+        onClick={() => setOpen(false)}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-sm overflow-hidden rounded-[28px] bg-card shadow-floating"
+        >
           <button
             onClick={() => setOpen(false)}
-            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-muted-foreground"
+            className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-card transition-transform active:scale-90"
             aria-label="Fechar"
           >
             <X className="h-4 w-4" />
           </button>
-          <div className="gradient-primary px-6 py-8 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-background/15 backdrop-blur shadow-glow">
-              <Crown className="h-8 w-8 text-primary-foreground" />
+
+          <div className="gradient-primary relative px-6 pb-7 pt-9 text-center text-primary-foreground">
+            <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/15 blur-2xl" />
+            <div className="absolute -bottom-10 -left-10 h-44 w-44 rounded-full bg-white/15 blur-2xl" />
+            <div className="relative">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white/20 backdrop-blur shadow-glow">
+                <Crown className="h-8 w-8" />
+              </div>
+              <p className="mt-4 text-[10px] font-extrabold uppercase tracking-[0.25em] opacity-90">
+                Oferta exclusiva
+              </p>
+              <h2 className="mt-1 text-3xl font-extrabold leading-tight">
+                Libere o VIP
+              </h2>
+              <p className="mx-auto mt-2 max-w-[280px] text-xs opacity-95">
+                Mais de <strong>10.000 vídeos</strong> exclusivos, sem propaganda e sem limite.
+              </p>
+              <div className="mt-4 inline-flex items-baseline gap-1.5 rounded-full bg-white/20 px-4 py-1.5 backdrop-blur">
+                <span className="text-2xl font-extrabold">
+                  R$ {price.toFixed(2).replace(".", ",")}
+                </span>
+                <span className="text-xs font-semibold opacity-90">/ {days} dias</span>
+              </div>
             </div>
-            <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground/90">
-              Oferta exclusiva
-            </p>
-            <h2 className="mt-1 text-2xl font-extrabold text-primary-foreground">
-              Libere o VIP agora
-            </h2>
-            <p className="mx-auto mt-2 max-w-[260px] text-xs text-primary-foreground/90">
-              Mais de <strong>10.000 vídeos</strong> exclusivos, sem propaganda e sem limite.
-            </p>
           </div>
-          <div className="space-y-3 p-5">
-            <ul className="space-y-1.5 text-xs">
-              <li className="flex items-center gap-2"><span className="text-primary">✓</span> Acervo completo desbloqueado</li>
-              <li className="flex items-center gap-2"><span className="text-primary">✓</span> Novos vídeos toda semana</li>
-              <li className="flex items-center gap-2"><span className="text-primary">✓</span> Sem anúncios, sem espera</li>
+
+          <div className="space-y-4 p-6">
+            <ul className="space-y-2.5 text-sm">
+              {[
+                "Acervo completo desbloqueado",
+                "Novos vídeos toda semana",
+                "Sem anúncios, sem espera",
+              ].map((t) => (
+                <li key={t} className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+                    <Check className="h-4 w-4" strokeWidth={3} />
+                  </span>
+                  <span className="font-semibold">{t}</span>
+                </li>
+              ))}
             </ul>
             <button
               onClick={() => {
                 setOpen(false);
                 setUpgradeOpen(true);
               }}
-              className="gradient-primary shadow-button flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-extrabold text-primary-foreground"
+              className="gradient-primary shadow-button flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-extrabold text-primary-foreground transition-transform active:scale-[0.98]"
             >
-              <Sparkles className="h-4 w-4" /> Quero ser VIP
+              <Flame className="h-4 w-4" /> Quero ser VIP agora
             </button>
             <button
               onClick={() => setOpen(false)}

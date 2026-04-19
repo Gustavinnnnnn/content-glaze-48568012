@@ -1,4 +1,5 @@
-import { Flame, Sparkles, Lock, Eye } from "lucide-react";
+import { Flame, Lock, Eye } from "lucide-react";
+import { displayViews, formatViews } from "@/lib/displayViews";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNav } from "@/contexts/NavContext";
 import { useState } from "react";
@@ -52,8 +53,8 @@ export const ContentCard = ({ item, index }: ContentCardProps) => {
                 </span>
               )}
               {item.is_vip && (
-                <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-foreground shadow">
-                  <Sparkles className="h-3 w-3 text-primary" /> VIP
+                <span className="flex items-center gap-1 rounded-full gradient-primary px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-primary-foreground shadow-button">
+                  <Flame className="h-3 w-3" /> VIP
                 </span>
               )}
             </div>
@@ -67,7 +68,7 @@ export const ContentCard = ({ item, index }: ContentCardProps) => {
               <h3 className="mt-1 text-lg font-bold leading-tight drop-shadow">{item.title}</h3>
               <div className="mt-2 flex items-center gap-1 text-xs opacity-90">
                 <Eye className="h-3.5 w-3.5" />
-                <span>{item.view_count.toLocaleString("pt-BR")} visualizações</span>
+                <span>{formatViews(displayViews(item.id, item.view_count))} visualizações</span>
               </div>
             </div>
 

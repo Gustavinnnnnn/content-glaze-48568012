@@ -3,6 +3,7 @@ import { Heart, MessageCircle, Share2, Lock, Sparkles, Crown, X } from "lucide-r
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { useVideos } from "@/hooks/useSiteData";
+import { displayViews, formatViews } from "@/lib/displayViews";
 
 export const ShortsScreen = () => {
   const { data: shorts = [] } = useVideos("shorts");
@@ -110,7 +111,7 @@ export const ShortsScreen = () => {
                 )}
                 <h2 className="mt-1 text-xl font-bold leading-tight drop-shadow">{s.title}</h2>
                 <p className="mt-1 text-xs opacity-80">
-                  {s.view_count.toLocaleString("pt-BR")} visualizações
+                  {formatViews(displayViews(s.id, s.view_count))} visualizações
                 </p>
               </div>
 
