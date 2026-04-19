@@ -9,6 +9,7 @@ import { ModelProfileScreen } from "@/screens/ModelProfileScreen";
 import { VideoScreen } from "@/screens/VideoScreen";
 import { VipPromoModal } from "@/components/VipPromoModal";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
+import { VipFloatingButton } from "@/components/VipFloatingButton";
 import { useNav, Tab } from "@/contexts/NavContext";
 
 const Index = () => {
@@ -50,6 +51,7 @@ const Index = () => {
         {view.type === "tab" && tab === "models" && <HomeScreen />}
       </main>
       {!hideNav && <BottomNav active={tab} onChange={setTab} />}
+      {!hideNav && !isShorts && !isFullScreen && <VipFloatingButton />}
       <VipPromoModal />
       <UpgradeDialog open={vipOpen} onOpenChange={setVipOpen} />
     </div>
