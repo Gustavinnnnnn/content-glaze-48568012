@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { resolveImage } from "@/lib/imageResolver";
 import { Input, Textarea, Toggle } from "./AdminVideos";
+import { FileUpload } from "@/components/admin/FileUpload";
 
 const AdminModels = () => {
   const { data: models = [], isLoading } = useAllModels();
@@ -105,8 +106,10 @@ const ModelForm = ({ model, onClose }: { model: Partial<ModelRow>; onClose: () =
           <Input label="Nome" value={form.name ?? ""} onChange={(v: string) => setForm({ ...form, name: v })} />
           <Input label="Handle (sem @)" value={form.handle ?? ""} onChange={(v: string) => setForm({ ...form, handle: v })} />
           <Textarea label="Bio" value={form.bio ?? ""} onChange={(v: string) => setForm({ ...form, bio: v })} />
-          <Input label="URL do avatar" value={form.avatar_url ?? ""} onChange={(v: string) => setForm({ ...form, avatar_url: v })} placeholder="https://..." />
-          <Input label="URL do banner" value={form.cover_url ?? ""} onChange={(v: string) => setForm({ ...form, cover_url: v })} placeholder="https://..." />
+          <FileUpload label="Avatar" bucket="models" folder="avatars" accept="image"
+            value={form.avatar_url} onChange={(url) => setForm({ ...form, avatar_url: url })} />
+          <FileUpload label="Banner" bucket="models" folder="covers" accept="image"
+            value={form.cover_url} onChange={(url) => setForm({ ...form, cover_url: url })} />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Preço mensal (R$)" type="number" value={String(form.monthly_price ?? 19.9)} onChange={(v: string) => setForm({ ...form, monthly_price: v })} />
             <Input label="Ordem" type="number" value={String(form.display_order ?? 0)} onChange={(v: string) => setForm({ ...form, display_order: v })} />
