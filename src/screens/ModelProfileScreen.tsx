@@ -2,10 +2,11 @@ import { useState } from "react";
 import { ArrowLeft, Check, Crown, Lock, MessageCircle, Share2, Sparkles, Verified, Loader2 } from "lucide-react";
 import { useNav } from "@/contexts/NavContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useModel, useModelVideos, useSubscribeToModel } from "@/hooks/useSiteData";
+import { useModel, useModelVideos } from "@/hooks/useSiteData";
 import { resolveImage } from "@/lib/imageResolver";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { PixCheckout } from "@/components/PixCheckout";
 
 export const ModelProfileScreen = ({ id }: { id: string }) => {
   const { back, openVideo } = useNav();
@@ -13,19 +14,19 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
   const { user, vip, subscribedModelIds } = useAuth();
   const { data: model, isLoading } = useModel(id);
   const { data: videos = [] } = useModelVideos(id);
-  const subscribe = useSubscribeToModel();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pixOpen, setPixOpen] = useState(false);
 
   const subscribed = !!model && (vip.isVip || subscribedModelIds.includes(model.id));
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!user) {
       navigate("/auth");
       return;
     }
     if (!model) return;
-    await subscribe.mutateAsync({ modelId: model.id, monthlyPrice: Number(model.monthly_price) });
     setConfirmOpen(false);
+    setPixOpen(true);
   };
 
   if (isLoading) {
@@ -201,11 +202,9 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
             </div>
             <button
               onClick={handleConfirm}
-              disabled={subscribe.isPending}
-              className="gradient-primary shadow-button mt-5 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
+              className="gradient-primary shadow-button mt-5 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold text-primary-foreground"
             >
-              {subscribe.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {!user ? "Entrar e continuar" : "Confirmar e ativar"}
+              {!user ? "Entrar e continuar" : "Pagar com PIX"}
             </button>
             <button
               onClick={() => setConfirmOpen(false)}
@@ -216,6 +215,14 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
           </div>
         </div>
       )}
+
+      <PixCheckout
+        open={pixOpen}
+        onOpenChange={setPixOpen}
+        purchaseType="model_subscription"
+        modelId={model.id}
+        title={`Assinar ${model.name}`}
+      />
     </div>
   );
 };
