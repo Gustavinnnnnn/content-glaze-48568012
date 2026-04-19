@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loadUserData = useCallback(async (uid: string) => {
     // Run in parallel — RLS scopes everything to the user
     const [profileRes, rolesRes, permsRes, vipRes, modelSubsRes] = await Promise.all([
-      supabase.from("profiles").select("display_name").eq("user_id", uid).maybeSingle(),
+      supabase.from("profiles").select("display_name, is_banned").eq("user_id", uid).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
       supabase.from("admin_permissions").select("*").eq("user_id", uid).maybeSingle(),
       supabase
@@ -80,6 +80,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq("is_active", true)
         .gt("expires_at", new Date().toISOString()),
     ]);
+
+    // Force logout if banned
+    if (profileRes.data?.is_banned) {
+      await supabase.auth.signOut();
+      return;
+    }
 
     if (profileRes.data?.display_name) setDisplayName(profileRes.data.display_name);
     setRoles((rolesRes.data?.map((r) => r.role as AppRole)) ?? []);
