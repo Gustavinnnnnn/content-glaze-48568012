@@ -276,6 +276,4 @@ export const recordView = async (videoId: string, watchedSeconds: number, userId
     user_id: userId ?? null,
     watched_seconds: Math.floor(watchedSeconds),
   });
-  // increment counter (best-effort)
-  await supabase.rpc("increment", { row_id: videoId } as never).catch(() => {});
 };
