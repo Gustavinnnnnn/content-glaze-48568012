@@ -7,6 +7,7 @@ import { useModelPhotos } from "@/components/admin/ModelPhotosManager";
 import { resolveImage } from "@/lib/imageResolver";
 import { getModelBio } from "@/lib/rotatingCopy";
 import { cn } from "@/lib/utils";
+import { fakeModelStats, formatCompact } from "@/lib/fakeStats";
 import { useNavigate } from "react-router-dom";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 
@@ -106,11 +107,16 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
             </p>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-2 rounded-2xl bg-card p-3 shadow-card">
-            <Stat label="Fotos" value={photos.length.toString()} />
-            <Stat label="Vídeos" value={videos.length.toString()} />
-            <Stat label="Acesso" value={`R$${vipPrice.toFixed(0)}`} />
-          </div>
+          {(() => {
+            const stats = fakeModelStats(model.id, { photos: photos.length, videos: videos.length });
+            return (
+              <div className="mt-5 grid grid-cols-3 gap-2 rounded-2xl bg-card p-3 shadow-card">
+                <Stat label="Fotos" value={stats.photos.toString()} />
+                <Stat label="Vídeos" value={stats.videos.toString()} />
+                <Stat label="Curtidas" value={formatCompact(stats.likes)} />
+              </div>
+            );
+          })()}
 
           {!subscribed ? (
             <div className="mt-5 overflow-hidden rounded-3xl border border-primary/20 bg-card shadow-card">
@@ -162,7 +168,7 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
                 tab === "photos" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
               )}
             >
-              <ImageIcon className="h-3.5 w-3.5" /> Fotos · {photos.length}
+              <ImageIcon className="h-3.5 w-3.5" /> Fotos · {fakeModelStats(model.id, { photos: photos.length }).photos}
             </button>
             <button
               onClick={() => setTab("videos")}
@@ -171,7 +177,7 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
                 tab === "videos" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
               )}
             >
-              <Film className="h-3.5 w-3.5" /> Vídeos · {videos.length}
+              <Film className="h-3.5 w-3.5" /> Vídeos · {fakeModelStats(model.id, { videos: videos.length }).videos}
             </button>
           </div>
 
