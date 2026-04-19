@@ -14,7 +14,7 @@ export const ShortsScreen = () => {
   const { data: settings } = useSiteSettings();
   const { vip } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
+  
   const [activeIndex, setActiveIndex] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [paywallDismissed, setPaywallDismissed] = useState<Record<number, boolean>>({});
