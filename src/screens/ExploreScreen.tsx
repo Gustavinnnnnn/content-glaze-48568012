@@ -66,7 +66,7 @@ export const ExploreScreen = () => {
               // Inject inline VIP promo card every 6 thumbs (only for non-VIP)
               const showPromoBefore = !vip.isVip && i > 0 && i % 6 === 0;
               return (
-                <>
+                <div key={item.id} className="contents">
                   {showPromoBefore && (
                     <button
                       key={`promo-${i}`}
