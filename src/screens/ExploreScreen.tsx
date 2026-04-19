@@ -1,6 +1,6 @@
 import { Search, TrendingUp, Flame } from "lucide-react";
 import { useMemo, useState } from "react";
-import { contentList, trendingChips, mostSearched } from "@/data/content";
+import { contentList, mostSearched } from "@/data/content";
 import { ContentCard } from "@/components/ContentCard";
 
 export const ExploreScreen = () => {
@@ -35,22 +35,6 @@ export const ExploreScreen = () => {
       <div className="space-y-6 px-4 py-5">
         {showSuggestions && (
           <>
-            {/* Sugestões / chips */}
-            <section>
-              <h2 className="mb-3 px-1 text-sm font-bold text-muted-foreground">Sugestões</h2>
-              <div className="flex flex-wrap gap-2">
-                {trendingChips.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setQuery(c)}
-                    className="rounded-full bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-card transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-button"
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </section>
-
             {/* Mais buscados */}
             <section>
               <h2 className="mb-3 flex items-center gap-2 px-1 text-sm font-bold text-muted-foreground">
