@@ -27,6 +27,12 @@ type Cfg = {
   admin_chat_ids: any;
   mini_app_url: string | null;
   last_polled_at: string | null;
+  button_content_label: string | null;
+  button_content_path: string | null;
+  button_app_label: string | null;
+  button_app_path: string | null;
+  button_models_label: string | null;
+  button_models_path: string | null;
 };
 
 const DEFAULT_SITE_URL = typeof window !== "undefined" ? window.location.origin : "";
@@ -105,8 +111,14 @@ const AdminTelegram = () => {
       vip_channel_id: cfg.vip_channel_id,
       vip_channel_invite_link: cfg.vip_channel_invite_link,
       mini_app_url: cfg.mini_app_url,
+      button_content_label: cfg.button_content_label,
+      button_content_path: cfg.button_content_path,
+      button_app_label: cfg.button_app_label,
+      button_app_path: cfg.button_app_path,
+      button_models_label: cfg.button_models_label,
+      button_models_path: cfg.button_models_path,
     });
-    toast.success("Configurações salvas. Mande /start no bot pra ver os botões atualizados.");
+    toast.success("Salvo. Mande /start no bot pra ver os botões atualizados.");
   };
 
   const addAdmin = async () => {
@@ -269,17 +281,68 @@ const AdminTelegram = () => {
             </Card>
 
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-base">Mensagens automáticas</CardTitle></CardHeader>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Botões fixos do bot</CardTitle>
+                <CardDescription>
+                  Esses 3 botões aparecem na mensagem de /start. Personalize o texto e o caminho que abre dentro do Mini App.
+                  Use caminhos como <code>/#explore</code>, <code>/#models</code>, ou cole uma URL completa (https://...).
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[
+                  { lk: "button_content_label", pk: "button_content_path", title: "Botão 1 — Conteúdo" },
+                  { lk: "button_app_label",     pk: "button_app_path",     title: "Botão 2 — Aplicativo" },
+                  { lk: "button_models_label",  pk: "button_models_path",  title: "Botão 3 — Modelos" },
+                ].map((b) => (
+                  <div key={b.lk} className="rounded-lg border border-border p-3 space-y-2">
+                    <p className="text-xs font-bold text-muted-foreground">{b.title}</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div>
+                        <Label className="text-[11px]">Texto do botão</Label>
+                        <Input
+                          value={(cfg as any)[b.lk] || ""}
+                          onChange={(e) => setCfg({ ...cfg, [b.lk]: e.target.value } as any)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[11px]">Caminho ou URL</Label>
+                        <Input
+                          placeholder="/#explore"
+                          value={(cfg as any)[b.pk] || ""}
+                          onChange={(e) => setCfg({ ...cfg, [b.pk]: e.target.value } as any)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <Button onClick={saveSettings} className="w-full sm:w-auto">Salvar botões</Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3"><CardTitle className="text-base">Mensagem de boas-vindas</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <Label>Mensagem de boas-vindas (/start)</Label>
+                  <Label>Texto enviado no /start</Label>
                   <Textarea
                     rows={3}
                     value={cfg.welcome_message || ""}
                     onChange={(e) => setCfg({ ...cfg, welcome_message: e.target.value })}
                   />
-                  <p className="mt-1 text-[11px] text-muted-foreground">Os botões aparecem automaticamente abaixo da mensagem.</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">Os 3 botões fixos aparecem automaticamente abaixo desta mensagem.</p>
                 </div>
+                <Button onClick={saveSettings} className="w-full sm:w-auto">Salvar mensagem</Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Canal VIP (uso interno)</CardTitle>
+                <CardDescription>
+                  Este link <b>NÃO</b> aparece como botão no bot. Ele é mostrado para o usuário no checkout, depois que ele paga TODAS as taxas.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <Label>ID do canal VIP</Label>
@@ -290,7 +353,7 @@ const AdminTelegram = () => {
                     />
                   </div>
                   <div>
-                    <Label>Link do canal VIP</Label>
+                    <Label>Link de convite do canal VIP</Label>
                     <Input
                       placeholder="https://t.me/+abc..."
                       value={cfg.vip_channel_invite_link || ""}

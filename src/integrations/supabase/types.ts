@@ -368,6 +368,12 @@ export type Database = {
           bot_name: string | null
           bot_token: string | null
           bot_username: string | null
+          button_app_label: string | null
+          button_app_path: string | null
+          button_content_label: string | null
+          button_content_path: string | null
+          button_models_label: string | null
+          button_models_path: string | null
           created_at: string
           id: number
           is_active: boolean
@@ -389,6 +395,12 @@ export type Database = {
           bot_name?: string | null
           bot_token?: string | null
           bot_username?: string | null
+          button_app_label?: string | null
+          button_app_path?: string | null
+          button_content_label?: string | null
+          button_content_path?: string | null
+          button_models_label?: string | null
+          button_models_path?: string | null
           created_at?: string
           id: number
           is_active?: boolean
@@ -410,6 +422,12 @@ export type Database = {
           bot_name?: string | null
           bot_token?: string | null
           bot_username?: string | null
+          button_app_label?: string | null
+          button_app_path?: string | null
+          button_content_label?: string | null
+          button_content_path?: string | null
+          button_models_label?: string | null
+          button_models_path?: string | null
           created_at?: string
           id?: number
           is_active?: boolean

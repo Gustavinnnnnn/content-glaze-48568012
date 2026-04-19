@@ -21,18 +21,21 @@ async function tg(token: string, method: string, body?: any) {
   return data.result;
 }
 
-function buildMenuKeyboard(miniAppUrl: string | null, vipLink: string | null) {
-  const rows: any[] = [];
-  if (miniAppUrl) {
-    const base = miniAppUrl.replace(/#.*$/, "").replace(/\/$/, "");
-    rows.push([{ text: "🎬 Conteúdos", web_app: { url: `${base}/#explore` } }]);
-    rows.push([{ text: "🔥 Modelos", web_app: { url: `${base}/#models` } }]);
-    rows.push([{ text: "👑 Acesso VIP", web_app: { url: `${base}/#vip` } }]);
-  }
-  if (vipLink) {
-    rows.push([{ text: "📢 Canal VIP", url: vipLink }]);
-  }
-  if (rows.length === 0) return undefined;
+function buildMenuKeyboard(cfg: any) {
+  const miniAppUrl: string | null = cfg.mini_app_url;
+  if (!miniAppUrl) return undefined;
+  const base = miniAppUrl.replace(/#.*$/, "").replace(/\/$/, "");
+  const join = (path: string) => {
+    if (!path) return base;
+    if (/^https?:\/\//i.test(path)) return path;
+    return path.startsWith("/") ? `${base}${path}` : `${base}/${path}`;
+  };
+  const buttons = [
+    { label: cfg.button_content_label || "🎬 Conteúdo", path: cfg.button_content_path || "/#explore" },
+    { label: cfg.button_app_label || "📱 Aplicativo", path: cfg.button_app_path || "/" },
+    { label: cfg.button_models_label || "🔥 Modelos", path: cfg.button_models_path || "/#models" },
+  ];
+  const rows = buttons.map((b) => [{ text: b.label, web_app: { url: join(b.path) } }]);
   return { inline_keyboard: rows };
 }
 
@@ -103,7 +106,7 @@ Deno.serve(async (req) => {
       // commands
       const text = (m.text || "").trim();
       if (text === "/start" || text === "/menu" || text === "/help") {
-        const keyboard = buildMenuKeyboard(cfg.mini_app_url, cfg.vip_channel_invite_link);
+        const keyboard = buildMenuKeyboard(cfg);
         const welcome = cfg.welcome_message || "Olá! Bem-vindo.";
         try {
           const sent = await tg(cfg.bot_token, "sendMessage", {
@@ -189,7 +192,7 @@ Deno.serve(async (req) => {
     if (action === "send") {
       const { chat_id, text } = body;
       if (!chat_id || !text) throw new Error("chat_id e text obrigatórios");
-      const keyboard = buildMenuKeyboard(cfg.mini_app_url, cfg.vip_channel_invite_link);
+      const keyboard = buildMenuKeyboard(cfg);
       const sent = await tg(cfg.bot_token, "sendMessage", {
         chat_id, text, parse_mode: "HTML", reply_markup: keyboard,
       });
