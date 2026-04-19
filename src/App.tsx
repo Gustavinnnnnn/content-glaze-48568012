@@ -9,6 +9,9 @@ import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import AdminLogin from "./pages/AdminLogin.tsx";
+
+// 🔒 Slug secreto do painel admin — NÃO compartilhe. Para mudar, atualize aqui e em useAuth/MenuPanel.
+export const ADMIN_SLUG = "x7k9m2-painel-q4w8";
 import AdminLayout from "./pages/admin/AdminLayout.tsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminVideos from "./pages/admin/AdminVideos.tsx";
@@ -32,9 +35,9 @@ const RequireAdmin = ({
 }) => {
   const { loading, user, isAdmin, isSuperAdmin, permissions } = useAuth();
   if (loading) return <div className="flex h-[100dvh] items-center justify-center text-sm text-muted-foreground">Carregando…</div>;
-  if (!user) return <Navigate to="/admin/login" replace />;
-  if (!isAdmin) return <Navigate to="/admin/login" replace />;
-  if (permission && !isSuperAdmin && !permissions?.[permission]) return <Navigate to="/admin" replace />;
+  if (!user) return <Navigate to={`/${ADMIN_SLUG}/login`} replace />;
+  if (!isAdmin) return <Navigate to={`/${ADMIN_SLUG}/login`} replace />;
+  if (permission && !isSuperAdmin && !permissions?.[permission]) return <Navigate to={`/${ADMIN_SLUG}`} replace />;
   return <>{children}</>;
 };
 
@@ -48,9 +51,12 @@ const App = () => (
           <NavProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path={`/${ADMIN_SLUG}/login`} element={<AdminLogin />} />
               <Route path="/" element={<Index />} />
-              <Route path="/admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
+              {/* Block old public admin path */}
+              <Route path="/admin" element={<NotFound />} />
+              <Route path="/admin/login" element={<NotFound />} />
+              <Route path={`/${ADMIN_SLUG}`} element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
                 <Route index element={<RequireAdmin permission="can_view_dashboard"><AdminDashboard /></RequireAdmin>} />
                 <Route path="videos" element={<RequireAdmin permission="can_manage_videos"><AdminVideos /></RequireAdmin>} />
                 <Route path="models" element={<RequireAdmin permission="can_manage_models"><AdminModels /></RequireAdmin>} />

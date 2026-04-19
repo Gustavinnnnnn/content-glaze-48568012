@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { ADMIN_SLUG } from "@/App";
 import { ShieldCheck, Loader2, Mail, Lock } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -19,7 +20,7 @@ const AdminLogin = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!loading && user && isAdmin) navigate("/admin", { replace: true });
+    if (!loading && user && isAdmin) navigate(`/${ADMIN_SLUG}`, { replace: true });
   }, [user, loading, isAdmin, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,9 +55,9 @@ const AdminLogin = () => {
           if (!isAdmin) {
             toast.error("Esta conta não tem acesso ao painel administrativo.");
             await signOut();
-          } else navigate("/admin", { replace: true });
+          } else navigate(`/${ADMIN_SLUG}`, { replace: true });
         }, 700);
-      } else navigate("/admin", { replace: true });
+      } else navigate(`/${ADMIN_SLUG}`, { replace: true });
     }, 100);
   };
 
