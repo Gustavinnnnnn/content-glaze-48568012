@@ -17,6 +17,7 @@ import { UpgradeDialog } from "./UpgradeDialog";
 import { useNavigate } from "react-router-dom";
 import { useUserHistory } from "@/hooks/useSiteData";
 import { resolveImage } from "@/lib/imageResolver";
+import { ADMIN_SLUG } from "@/lib/adminSlug";
 
 interface MenuPanelProps {
   open: boolean;
@@ -32,7 +33,7 @@ export const MenuPanel = ({ open, onOpenChange }: MenuPanelProps) => {
   const items = [
     { icon: History, label: "Histórico", onClick: () => setHistoryOpen(true), show: !!user },
     ...(isAdmin
-      ? [{ icon: Shield, label: "Painel admin", onClick: () => navigate("/admin"), show: true }]
+      ? [{ icon: Shield, label: "Painel admin", onClick: () => navigate(`/${ADMIN_SLUG}`), show: true }]
       : []),
     { icon: LifeBuoy, label: "Suporte", onClick: () => {}, show: true },
     { icon: Settings, label: "Configurações", onClick: () => {}, show: !!user },

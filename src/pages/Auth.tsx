@@ -165,15 +165,6 @@ const Auth = () => {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-[11px] text-muted-foreground">
-          É administrador?{" "}
-          <button
-            onClick={() => navigate("/admin/login")}
-            className="font-bold text-primary hover:underline"
-          >
-            Acesso ao painel →
-          </button>
-        </p>
       </div>
     </div>
   );

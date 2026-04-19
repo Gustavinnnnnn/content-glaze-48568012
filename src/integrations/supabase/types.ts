@@ -174,6 +174,7 @@ export type Database = {
           id: string
           model_id: string | null
           paid_at: string | null
+          parent_order_id: string | null
           payment_gateway: string | null
           purchase_type: Database["public"]["Enums"]["purchase_type"]
           status: Database["public"]["Enums"]["order_status"]
@@ -190,6 +191,7 @@ export type Database = {
           id?: string
           model_id?: string | null
           paid_at?: string | null
+          parent_order_id?: string | null
           payment_gateway?: string | null
           purchase_type: Database["public"]["Enums"]["purchase_type"]
           status?: Database["public"]["Enums"]["order_status"]
@@ -206,6 +208,7 @@ export type Database = {
           id?: string
           model_id?: string | null
           paid_at?: string | null
+          parent_order_id?: string | null
           payment_gateway?: string | null
           purchase_type?: Database["public"]["Enums"]["purchase_type"]
           status?: Database["public"]["Enums"]["order_status"]
@@ -218,6 +221,13 @@ export type Database = {
             columns: ["model_id"]
             isOneToOne: false
             referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_parent_order_id_fkey"
+            columns: ["parent_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -254,6 +264,8 @@ export type Database = {
       }
       site_settings: {
         Row: {
+          access_fee_amount: number
+          access_fee_enabled: boolean
           id: string
           logo_url: string | null
           payment_gateway: string | null
@@ -267,6 +279,8 @@ export type Database = {
           vip_monthly_price: number
         }
         Insert: {
+          access_fee_amount?: number
+          access_fee_enabled?: boolean
           id?: string
           logo_url?: string | null
           payment_gateway?: string | null
@@ -280,6 +294,8 @@ export type Database = {
           vip_monthly_price?: number
         }
         Update: {
+          access_fee_amount?: number
+          access_fee_enabled?: boolean
           id?: string
           logo_url?: string | null
           payment_gateway?: string | null
@@ -667,7 +683,7 @@ export type Database = {
     Enums: {
       app_role: "user" | "admin" | "super_admin"
       order_status: "pending" | "paid" | "cancelled" | "refunded"
-      purchase_type: "vip_global" | "model_subscription"
+      purchase_type: "vip_global" | "model_subscription" | "access_fee"
       video_placement: "home" | "explore" | "shorts"
     }
     CompositeTypes: {
@@ -798,7 +814,7 @@ export const Constants = {
     Enums: {
       app_role: ["user", "admin", "super_admin"],
       order_status: ["pending", "paid", "cancelled", "refunded"],
-      purchase_type: ["vip_global", "model_subscription"],
+      purchase_type: ["vip_global", "model_subscription", "access_fee"],
       video_placement: ["home", "explore", "shorts"],
     },
   },

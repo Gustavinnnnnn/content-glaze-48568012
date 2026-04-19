@@ -6,16 +6,18 @@ import {
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
+import { ADMIN_SLUG } from "@/lib/adminSlug";
 
+const BASE = `/${ADMIN_SLUG}`;
 const items: { to: string; label: string; icon: any; perm?: keyof AdminPermissions }[] = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, perm: "can_view_dashboard" },
-  { to: "/admin/videos", label: "Vídeos", icon: Film, perm: "can_manage_videos" },
-  { to: "/admin/models", label: "Modelos", icon: Users, perm: "can_manage_models" },
-  { to: "/admin/users", label: "Usuários", icon: UserCog, perm: "can_manage_users" },
-  { to: "/admin/admins", label: "Admins", icon: ShieldCheck, perm: "can_manage_admins" },
-  { to: "/admin/sales", label: "Vendas", icon: ShoppingBag, perm: "can_view_sales" },
-  { to: "/admin/telegram", label: "Telegram", icon: Send, perm: "can_manage_settings" },
-  { to: "/admin/settings", label: "Config", icon: Settings, perm: "can_manage_settings" },
+  { to: BASE, label: "Dashboard", icon: LayoutDashboard, perm: "can_view_dashboard" },
+  { to: `${BASE}/videos`, label: "Vídeos", icon: Film, perm: "can_manage_videos" },
+  { to: `${BASE}/models`, label: "Modelos", icon: Users, perm: "can_manage_models" },
+  { to: `${BASE}/users`, label: "Usuários", icon: UserCog, perm: "can_manage_users" },
+  { to: `${BASE}/admins`, label: "Admins", icon: ShieldCheck, perm: "can_manage_admins" },
+  { to: `${BASE}/sales`, label: "Vendas", icon: ShoppingBag, perm: "can_view_sales" },
+  { to: `${BASE}/telegram`, label: "Telegram", icon: Send, perm: "can_manage_settings" },
+  { to: `${BASE}/settings`, label: "Config", icon: Settings, perm: "can_manage_settings" },
 ];
 
 const AdminLayout = () => {
@@ -30,7 +32,7 @@ const AdminLayout = () => {
         <NavLink
           key={i.to}
           to={i.to}
-          end={i.to === "/admin"}
+          end={i.to === BASE}
           onClick={onNav}
           className={({ isActive }) =>
             cn(
@@ -56,7 +58,7 @@ const AdminLayout = () => {
         <ArrowLeft className="h-4 w-4" /> Voltar ao site
       </button>
       <button
-        onClick={async () => { onNav?.(); await signOut(); navigate("/admin/login"); }}
+        onClick={async () => { onNav?.(); await signOut(); navigate(`${BASE}/login`); }}
         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/10"
       >
         <LogOut className="h-4 w-4" /> Sair
