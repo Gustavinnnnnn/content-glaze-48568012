@@ -31,7 +31,11 @@ Deno.serve(async (req) => {
     if (!user) throw new Error("Não autenticado");
 
     const body = await req.json();
-    const { purchase_type, model_id } = body as { purchase_type: "vip_global" | "model_subscription"; model_id?: string };
+    const { purchase_type, model_id, parent_order_id } = body as {
+      purchase_type: "vip_global" | "model_subscription" | "access_fee";
+      model_id?: string;
+      parent_order_id?: string;
+    };
 
     // Get profile
     const { data: profile } = await supabase
@@ -44,38 +48,52 @@ Deno.serve(async (req) => {
     let amountReais = 0;
     let durationDays = 30;
     let description = "Acesso VIP";
+    let orderId: string;
 
-    if (purchase_type === "vip_global") {
-      const { data: s } = await supabase.from("site_settings").select("vip_monthly_price, vip_duration_days").limit(1).maybeSingle();
-      amountReais = Number(s?.vip_monthly_price ?? 49.9);
-      durationDays = s?.vip_duration_days ?? 30;
-      description = "Acesso VIP";
-    } else if (purchase_type === "model_subscription" && model_id) {
-      const { data: m } = await supabase.from("models").select("monthly_price, name").eq("id", model_id).maybeSingle();
-      if (!m) throw new Error("Modelo não encontrado");
-      amountReais = Number(m.monthly_price);
-      description = `Assinatura ${m.name}`;
+    if (purchase_type === "access_fee") {
+      // Find existing pending fee order for this user (or by parent)
+      let q = supabase.from("orders").select("*").eq("user_id", user.id).eq("purchase_type", "access_fee").eq("status", "pending");
+      if (parent_order_id) q = q.eq("parent_order_id", parent_order_id);
+      const { data: feeOrder } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!feeOrder) throw new Error("Nenhuma taxa pendente encontrada");
+      orderId = feeOrder.id;
+      amountReais = Number(feeOrder.amount);
+      durationDays = 0;
+      description = "Taxa de acesso (100% reembolsável)";
     } else {
-      throw new Error("purchase_type inválido");
+      if (purchase_type === "vip_global") {
+        const { data: s } = await supabase.from("site_settings").select("vip_monthly_price, vip_duration_days").limit(1).maybeSingle();
+        amountReais = Number(s?.vip_monthly_price ?? 49.9);
+        durationDays = s?.vip_duration_days ?? 30;
+        description = "Acesso VIP";
+      } else if (purchase_type === "model_subscription" && model_id) {
+        const { data: m } = await supabase.from("models").select("monthly_price, name").eq("id", model_id).maybeSingle();
+        if (!m) throw new Error("Modelo não encontrado");
+        amountReais = Number(m.monthly_price);
+        description = `Assinatura ${m.name}`;
+      } else {
+        throw new Error("purchase_type inválido");
+      }
+
+      // Create order pending
+      const { data: order, error: orderErr } = await supabase
+        .from("orders")
+        .insert({
+          user_id: user.id,
+          purchase_type,
+          model_id: model_id ?? null,
+          amount: amountReais,
+          status: "pending",
+          duration_days: durationDays,
+          payment_gateway: "paradise",
+        })
+        .select()
+        .single();
+      if (orderErr) throw orderErr;
+      orderId = order.id;
     }
 
     const amountCents = Math.round(amountReais * 100);
-
-    // Create order pending
-    const { data: order, error: orderErr } = await supabase
-      .from("orders")
-      .insert({
-        user_id: user.id,
-        purchase_type,
-        model_id: model_id ?? null,
-        amount: amountReais,
-        status: "pending",
-        duration_days: durationDays,
-        payment_gateway: "paradise",
-      })
-      .select()
-      .single();
-    if (orderErr) throw orderErr;
 
     const postbackUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/paradise-webhook`;
 
@@ -83,7 +101,7 @@ Deno.serve(async (req) => {
     const payload = {
       amount: amountCents,
       description,
-      reference: order.id,
+      reference: orderId,
       source: "api_externa",
       postback_url: postbackUrl,
       customer: {
@@ -116,11 +134,11 @@ Deno.serve(async (req) => {
         gateway_transaction_id: String(data.transaction_id),
         gateway_metadata: data,
       })
-      .eq("id", order.id);
+      .eq("id", orderId);
 
     return new Response(
       JSON.stringify({
-        order_id: order.id,
+        order_id: orderId,
         transaction_id: data.transaction_id,
         qr_code: data.qr_code,
         qr_code_base64: data.qr_code_base64,
