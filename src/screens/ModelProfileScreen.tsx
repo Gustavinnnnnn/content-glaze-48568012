@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Check, Crown, Lock, MessageCircle, Share2, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, Crown, Lock, MessageCircle, Share2, Sparkles, Verified } from "lucide-react";
 import { models } from "@/data/models";
 import { useNav } from "@/contexts/NavContext";
 import { useUser } from "@/contexts/UserContext";
@@ -29,13 +29,13 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
   ];
 
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div className="relative flex h-full flex-col bg-background">
       <div className="relative flex-1 overflow-y-auto no-scrollbar pb-32">
         {/* Cover */}
-        <div className="relative h-44 w-full overflow-hidden">
-          <img src={model.cover} alt="" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-background" />
-          <div className="absolute left-0 right-0 top-0 flex justify-between p-3 safe-top">
+        <div className="relative h-52 w-full overflow-hidden">
+          <img src={model.cover} alt="" className="h-full w-full scale-110 object-cover blur-sm" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-background" />
+          <div className="absolute left-0 right-0 top-0 z-10 flex justify-between p-3 safe-top">
             <button
               onClick={back}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md"
@@ -52,33 +52,32 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
           </div>
         </div>
 
-        {/* Profile header */}
-        <div className="-mt-14 px-5">
-          <div className="flex items-end gap-4">
-            <div className="rounded-full bg-gradient-to-tr from-primary to-primary-glow p-[3px]">
+        {/* Profile header — avatar centered, no overlap with cover controls */}
+        <div className="-mt-20 px-5">
+          <div className="flex flex-col items-center text-center">
+            <div className="relative rounded-full bg-gradient-to-tr from-primary to-primary-glow p-[3px] shadow-floating">
               <img
                 src={model.avatar}
                 alt={model.name}
-                className="h-24 w-24 rounded-full border-4 border-background object-cover shadow-floating"
+                className="h-28 w-28 rounded-full border-4 border-background object-cover"
               />
-            </div>
-            <div className="flex-1 pb-2">
               {subscribed && (
-                <span className="inline-flex items-center gap-1 rounded-full gradient-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground shadow-button">
-                  <Crown className="h-3 w-3" /> Assinante
+                <span className="absolute -bottom-1 right-0 flex h-7 w-7 items-center justify-center rounded-full gradient-primary text-primary-foreground shadow-button">
+                  <Crown className="h-3.5 w-3.5" />
                 </span>
               )}
             </div>
-          </div>
 
-          <div className="mt-3">
-            <h1 className="text-2xl font-extrabold tracking-tight">{model.name}</h1>
+            <div className="mt-3 flex items-center gap-1.5">
+              <h1 className="text-2xl font-extrabold tracking-tight">{model.name}</h1>
+              <Verified className="h-5 w-5 fill-primary text-primary-foreground" />
+            </div>
             <p className="text-xs font-medium text-muted-foreground">@{model.handle}</p>
-            <p className="mt-2 text-sm leading-relaxed">{model.bio}</p>
+            <p className="mt-2 max-w-xs text-sm leading-relaxed">{model.bio}</p>
           </div>
 
           {/* Stats */}
-          <div className="mt-4 grid grid-cols-3 gap-2 rounded-2xl bg-card p-3 shadow-card">
+          <div className="mt-5 grid grid-cols-3 gap-2 rounded-2xl bg-card p-3 shadow-card">
             <Stat label="Posts" value={model.posts.toString()} />
             <Stat label="Assinantes" value={model.subscribers} />
             <Stat label="Mensal" value={`R$${model.price.toFixed(0)}`} />
@@ -154,7 +153,7 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
         </section>
       </div>
 
-      {/* Confirm dialog (lightweight) */}
+      {/* Confirm dialog */}
       {confirmOpen && (
         <div className="absolute inset-0 z-50 flex items-end justify-center bg-foreground/40 backdrop-blur-sm sm:items-center">
           <div className="w-full max-w-md rounded-t-3xl bg-background p-6 shadow-floating sm:rounded-3xl">
