@@ -14,7 +14,7 @@ export const ShortsScreen = () => {
   const { data: settings } = useSiteSettings();
   const { vip } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
+  
   const [activeIndex, setActiveIndex] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [paywallDismissed, setPaywallDismissed] = useState<Record<number, boolean>>({});
@@ -45,15 +45,20 @@ export const ShortsScreen = () => {
     return () => el.removeEventListener("scroll", onScroll);
   }, [activeIndex]);
 
-  // Play active, pause others
+  // Play active, pause others. Re-query DOM each time so we always see the latest <video> nodes.
   useEffect(() => {
-    videoRefs.current.forEach((v, i) => {
-      if (i === activeIndex) {
+    const el = containerRef.current;
+    if (!el) return;
+    const videos = el.querySelectorAll<HTMLVideoElement>("video[data-short]");
+    videos.forEach((v) => {
+      const idx = Number(v.dataset.index);
+      if (idx === activeIndex) {
         v.muted = muted;
-        v.play().catch(() => {});
+        const p = v.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
       } else {
         v.pause();
-        v.currentTime = 0;
+        if (v.currentTime > 0.1) v.currentTime = 0;
       }
     });
   }, [activeIndex, feed.length, muted]);
@@ -126,16 +131,23 @@ export const ShortsScreen = () => {
             >
               {s.video_url ? (
                 <video
-                  ref={(el) => {
-                    if (el) videoRefs.current.set(i, el);
-                    else videoRefs.current.delete(i);
-                  }}
+                  data-short=""
+                  data-index={i}
                   src={s.video_url}
                   loop
                   playsInline
-                  preload={Math.abs(i - activeIndex) <= 1 ? "auto" : "metadata"}
+                  muted={muted}
+                  preload="auto"
                   className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`}
                   onClick={() => setMuted((m) => !m)}
+                  onLoadedData={(e) => {
+                    if (i === activeIndex) {
+                      const v = e.currentTarget;
+                      v.muted = muted;
+                      const p = v.play();
+                      if (p && typeof p.catch === "function") p.catch(() => {});
+                    }
+                  }}
                 />
               ) : (
                 <div className="h-full w-full bg-neutral-900" />
