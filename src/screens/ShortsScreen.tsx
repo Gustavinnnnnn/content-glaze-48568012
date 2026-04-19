@@ -14,16 +14,14 @@ export const ShortsScreen = () => {
   const { data: settings } = useSiteSettings();
   const { vip } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
-  
-  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [paywallDismissed, setPaywallDismissed] = useState<Record<number, boolean>>({});
-  const [muted, setMuted] = useState(true); // start muted (autoplay needs it), unmute on tap
+  const [muted, setMuted] = useState(true);
 
   const vipPrice = settings?.vip_monthly_price ?? 19.9;
 
-  // Build the feed: every 3 videos, inject a full-screen VIP promo (only for non-VIP users)
   const feed: FeedItem[] = useMemo(() => {
     const items: FeedItem[] = [];
     shorts.forEach((v, idx) => {
@@ -35,32 +33,29 @@ export const ShortsScreen = () => {
     return items;
   }, [shorts, vip.isVip]);
 
-  // Use IntersectionObserver to reliably detect which section is on screen.
-  // Only the active section mounts a <video>; siblings unmount entirely → no ghost playback/audio.
+  // Detect active section via scroll position. Simple, deterministic, mobile-proof.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const sections = sectionRefs.current.filter(Boolean) as HTMLElement[];
-    if (sections.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // Pick the entry with the highest intersection ratio that is >= 0.6
-        let best: IntersectionObserverEntry | null = null;
-        for (const e of entries) {
-          if (e.intersectionRatio >= 0.6 && (!best || e.intersectionRatio > best.intersectionRatio)) {
-            best = e;
-          }
-        }
-        if (best) {
-          const idx = Number((best.target as HTMLElement).dataset.idx);
-          if (!Number.isNaN(idx)) setActiveIndex(idx);
-        }
-      },
-      { root: el, threshold: [0.6, 0.9] }
-    );
-    sections.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
+    let raf = 0;
+    const compute = () => {
+      const h = el.clientHeight;
+      if (h === 0) return;
+      const idx = Math.round(el.scrollTop / h);
+      setActiveIndex((prev) => (prev === idx ? prev : idx));
+    };
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(compute);
+    };
+    compute();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", compute);
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", compute);
+    };
   }, [feed.length]);
 
   if (feed.length === 0) {
@@ -73,15 +68,16 @@ export const ShortsScreen = () => {
 
   return (
     <div className="relative h-full bg-black">
-      <div ref={containerRef} className="h-full snap-y snap-mandatory overflow-y-auto no-scrollbar overscroll-contain">
+      <div
+        ref={containerRef}
+        className="h-full snap-y snap-mandatory overflow-y-scroll no-scrollbar overscroll-contain"
+      >
         {feed.map((item, i) => {
           if (item.kind === "promo") {
             return (
               <section
                 key={item.id}
-                ref={(el) => { sectionRefs.current[i] = el; }}
-                data-idx={i}
-                className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden bg-gradient-to-br from-[hsl(20_95%_55%)] via-[hsl(15_92%_50%)] to-[hsl(0_85%_48%)] text-white"
+                className="relative flex h-full w-full snap-start snap-always items-center justify-center overflow-hidden bg-gradient-to-br from-[hsl(20_95%_55%)] via-[hsl(15_92%_50%)] to-[hsl(0_85%_48%)] text-white"
               >
                 <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
                 <div className="pointer-events-none absolute -bottom-20 -left-16 h-72 w-72 rounded-full bg-yellow-300/20 blur-3xl" />
@@ -126,45 +122,36 @@ export const ShortsScreen = () => {
           const s = item.video;
           const locked = s.is_vip && !vip.isVip;
           const showPaywall = locked && !paywallDismissed[i];
+          const isActive = i === activeIndex;
+          // Mount only the active video + the next one (for instant playback when user scrolls).
+          const shouldMountVideo = !!s.video_url && (i === activeIndex || i === activeIndex + 1);
+
           return (
             <section
               key={s.id + "-" + i}
-              ref={(el) => { sectionRefs.current[i] = el; }}
-              data-idx={i}
-              className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden bg-black"
+              className="relative flex h-full w-full snap-start snap-always items-center justify-center overflow-hidden bg-black"
             >
-              {s.video_url && Math.abs(i - activeIndex) <= 1 ? (
-                <video
-                  key={s.id + "-v-" + i}
-                  data-short=""
-                  data-index={i}
-                  src={s.video_url}
-                  loop
-                  playsInline
-                  muted={i === activeIndex ? muted : true}
-                  preload={i === activeIndex ? "auto" : "metadata"}
-                  autoPlay={i === activeIndex}
+              {shouldMountVideo ? (
+                <ShortVideo
+                  key={s.id + "-v"}
+                  src={s.video_url!}
+                  active={isActive}
+                  muted={muted}
+                  locked={locked}
+                  onToggleMute={() => setMuted((m) => !m)}
+                />
+              ) : s.thumbnail_url ? (
+                <img
+                  src={s.thumbnail_url}
+                  alt={s.title}
                   className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`}
-                  onClick={() => setMuted((m) => !m)}
-                  onLoadedData={(e) => {
-                    if (i === activeIndex) {
-                      const v = e.currentTarget;
-                      v.muted = muted;
-                      const p = v.play();
-                      if (p && typeof p.catch === "function") p.catch(() => {});
-                    }
-                  }}
+                  loading="lazy"
                 />
               ) : (
-                s.thumbnail_url ? (
-                  <img src={s.thumbnail_url} alt={s.title} className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`} />
-                ) : (
-                  <div className="h-full w-full bg-neutral-900" />
-                )
+                <div className="h-full w-full bg-neutral-900" />
               )}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/40" />
 
-              {/* Mute toggle */}
               <button
                 onClick={() => setMuted((m) => !m)}
                 className="absolute right-3 top-20 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md"
@@ -265,3 +252,63 @@ export const ShortsScreen = () => {
     </div>
   );
 };
+
+// Isolated <video> component: the parent fully unmounts it when out of range,
+// guaranteeing playback + audio stop. When `active` flips, we play/pause.
+function ShortVideo({
+  src,
+  active,
+  muted,
+  locked,
+  onToggleMute,
+}: {
+  src: string;
+  active: boolean;
+  muted: boolean;
+  locked: boolean;
+  onToggleMute: () => void;
+}) {
+  const ref = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = active ? muted : true;
+    if (active) {
+      const p = v.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } else {
+      v.pause();
+      try { v.currentTime = 0; } catch { /* noop */ }
+    }
+  }, [active, muted]);
+
+  // On unmount, force-stop everything (covers iOS audio leaks).
+  useEffect(() => {
+    return () => {
+      const v = ref.current;
+      if (!v) return;
+      try {
+        v.pause();
+        v.removeAttribute("src");
+        v.load();
+      } catch {
+        /* noop */
+      }
+    };
+  }, []);
+
+  return (
+    <video
+      ref={ref}
+      src={src}
+      loop
+      playsInline
+      muted={active ? muted : true}
+      preload="auto"
+      autoPlay={active}
+      onClick={onToggleMute}
+      className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`}
+    />
+  );
+}
