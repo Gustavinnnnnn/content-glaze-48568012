@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { ArrowLeft, Check, Crown, Lock, MessageCircle, Share2, Sparkles, Verified, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Crown, Lock, MessageCircle, Share2, Sparkles, Verified, Loader2, Image as ImageIcon, Film } from "lucide-react";
 import { useNav } from "@/contexts/NavContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useModel, useModelVideos } from "@/hooks/useSiteData";
+import { useModelPhotos } from "@/components/admin/ModelPhotosManager";
 import { resolveImage } from "@/lib/imageResolver";
+import { getModelBio } from "@/lib/rotatingCopy";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { PixCheckout } from "@/components/PixCheckout";
@@ -14,6 +16,8 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
   const { user, vip, subscribedModelIds } = useAuth();
   const { data: model, isLoading } = useModel(id);
   const { data: videos = [] } = useModelVideos(id);
+  const { data: photos = [] } = useModelPhotos(id);
+  const [tab, setTab] = useState<"photos" | "videos">("photos");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
 
@@ -98,12 +102,14 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
               <Verified className="h-5 w-5 fill-primary text-primary-foreground" />
             </div>
             <p className="text-xs font-medium text-muted-foreground">@{model.handle}</p>
-            {model.bio && <p className="mt-2 max-w-xs text-sm leading-relaxed">{model.bio}</p>}
+            <p className="mt-2 max-w-xs text-sm leading-relaxed">
+              {getModelBio(model.id, model.name, model.bio)}
+            </p>
           </div>
 
           <div className="mt-5 grid grid-cols-3 gap-2 rounded-2xl bg-card p-3 shadow-card">
-            <Stat label="Posts" value={videos.length.toString()} />
-            <Stat label="Status" value={model.is_active ? "Ativa" : "—"} />
+            <Stat label="Fotos" value={photos.length.toString()} />
+            <Stat label="Vídeos" value={videos.length.toString()} />
             <Stat label="Mensal" value={`R$${Number(model.monthly_price).toFixed(0)}`} />
           </div>
 
@@ -148,36 +154,96 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
         </div>
 
         <section className="px-4 pt-6">
-          <h2 className="mb-3 px-1 text-sm font-bold text-muted-foreground">Galeria</h2>
-          {videos.length === 0 ? (
-            <p className="px-1 text-xs text-muted-foreground">
-              Esta modelo ainda não tem conteúdos publicados.
-            </p>
-          ) : (
-            <div className="grid grid-cols-3 gap-1.5">
-              {videos.map((v, i) => {
-                const locked = !subscribed && i > 2;
-                return (
-                  <button
-                    key={v.id}
-                    onClick={() => !locked && openVideo(v.id)}
-                    className="relative aspect-square overflow-hidden rounded-xl bg-muted"
-                  >
-                    <img
-                      src={resolveImage(v.thumbnail_url)}
-                      alt={v.title}
-                      loading="lazy"
-                      className={cn("h-full w-full object-cover", locked && "blur-md scale-110")}
-                    />
-                    {locked && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-foreground/20">
-                        <Lock className="h-5 w-5 text-white drop-shadow" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          {/* Tabs */}
+          <div className="mb-3 flex gap-1 rounded-full bg-secondary p-1">
+            <button
+              onClick={() => setTab("photos")}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-xs font-bold transition-all",
+                tab === "photos" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              <ImageIcon className="h-3.5 w-3.5" /> Fotos · {photos.length}
+            </button>
+            <button
+              onClick={() => setTab("videos")}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-xs font-bold transition-all",
+                tab === "videos" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              <Film className="h-3.5 w-3.5" /> Vídeos · {videos.length}
+            </button>
+          </div>
+
+          {tab === "photos" && (
+            photos.length === 0 ? (
+              <p className="px-1 py-4 text-center text-xs text-muted-foreground">
+                Nenhuma foto na galeria ainda.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 gap-1.5">
+                {photos.map((p, i) => {
+                  const locked = (p.is_vip || i > 2) && !subscribed;
+                  return (
+                    <div
+                      key={p.id}
+                      className="relative aspect-square overflow-hidden rounded-xl bg-muted"
+                    >
+                      <img
+                        src={resolveImage(p.image_url)}
+                        alt=""
+                        loading="lazy"
+                        className={cn("h-full w-full object-cover", locked && "blur-xl scale-110")}
+                      />
+                      {locked && (
+                        <button
+                          onClick={() => setConfirmOpen(true)}
+                          className="absolute inset-0 flex items-center justify-center bg-foreground/20"
+                        >
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-background/95 shadow-card">
+                            <Lock className="h-4 w-4 text-primary" />
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+
+          {tab === "videos" && (
+            videos.length === 0 ? (
+              <p className="px-1 py-4 text-center text-xs text-muted-foreground">
+                Nenhum vídeo publicado ainda.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 gap-1.5">
+                {videos.map((v, i) => {
+                  const locked = !subscribed && i > 2;
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => !locked && openVideo(v.id)}
+                      className="relative aspect-square overflow-hidden rounded-xl bg-muted"
+                    >
+                      <img
+                        src={resolveImage(v.thumbnail_url)}
+                        alt={v.title}
+                        loading="lazy"
+                        className={cn("h-full w-full object-cover", locked && "blur-md scale-110")}
+                      />
+                      {locked && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-foreground/20">
+                          <Lock className="h-5 w-5 text-white drop-shadow" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )
           )}
         </section>
       </div>

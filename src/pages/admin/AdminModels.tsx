@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { resolveImage } from "@/lib/imageResolver";
 import { Input, Textarea, Toggle } from "./AdminVideos";
 import { FileUpload } from "@/components/admin/FileUpload";
+import { ModelPhotosManager } from "@/components/admin/ModelPhotosManager";
 
 const AdminModels = () => {
   const { data: models = [], isLoading } = useAllModels();
@@ -115,6 +116,17 @@ const ModelForm = ({ model, onClose }: { model: Partial<ModelRow>; onClose: () =
             <Input label="Ordem" type="number" value={String(form.display_order ?? 0)} onChange={(v: string) => setForm({ ...form, display_order: v })} />
           </div>
           <Toggle label="Ativa" checked={form.is_active !== false} onChange={(v: boolean) => setForm({ ...form, is_active: v })} />
+
+          {form.id && (
+            <div className="pt-2">
+              <ModelPhotosManager modelId={form.id} />
+            </div>
+          )}
+          {!form.id && (
+            <p className="rounded-lg bg-secondary p-2 text-[11px] text-muted-foreground">
+              💡 Salve a modelo primeiro para liberar a galeria de fotos.
+            </p>
+          )}
         </div>
         <button onClick={save} disabled={saving}
           className="gradient-primary shadow-button mt-5 flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-primary-foreground disabled:opacity-60">

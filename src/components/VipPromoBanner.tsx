@@ -1,32 +1,39 @@
-import { Crown, Sparkles } from "lucide-react";
+import { Crown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { UpgradeDialog } from "./UpgradeDialog";
+import { useSiteSettings } from "@/hooks/useSiteData";
 
 export const VipPromoBanner = ({ compact = false }: { compact?: boolean }) => {
   const [open, setOpen] = useState(false);
+  const { data: settings } = useSiteSettings();
+  const price = settings?.vip_monthly_price ?? 49.9;
+
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="relative w-full overflow-hidden rounded-2xl gradient-primary p-[1.5px] text-left shadow-button transition-transform active:scale-[0.99]"
+        className="group relative w-full overflow-hidden rounded-2xl bg-card text-left ring-1 ring-border transition-transform active:scale-[0.99]"
       >
-        <div className="flex items-center gap-3 rounded-[15px] bg-background/95 px-4 py-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl gradient-primary shadow-glow">
-            <Crown className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
-              Acesso VIP
-            </p>
-            <p className="truncate text-sm font-extrabold">
-              {compact ? "Mais de 10.000 vídeos sem limite" : "Veja completo no nosso VIP"}
-            </p>
-            <p className="truncate text-[11px] text-muted-foreground">
-              Mais de 10.000 vídeos · sem propagandas · acesso total
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1 rounded-full gradient-primary px-3 py-1.5 text-[11px] font-extrabold text-primary-foreground">
-            <Sparkles className="h-3 w-3" /> Assinar
+        <div className="flex items-stretch">
+          {/* Left accent bar */}
+          <div className="w-1 shrink-0 gradient-primary" />
+
+          <div className="flex flex-1 items-center gap-3 px-3.5 py-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Crown className="h-5 w-5" strokeWidth={2.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                Acesso completo
+              </p>
+              <p className="truncate text-sm font-extrabold leading-tight">
+                {compact ? "Desbloqueie tudo no VIP" : "Desbloqueie todas as modelos"}
+              </p>
+              <p className="truncate text-[11px] font-medium text-muted-foreground">
+                A partir de R$ {price.toFixed(2).replace(".", ",")} · ativação imediata
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </div>
         </div>
       </button>

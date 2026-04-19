@@ -7,10 +7,8 @@ import { ContentCard } from "@/components/ContentCard";
 import { VipPromoBanner } from "@/components/VipPromoBanner";
 import { useVideo, useVideos, recordView } from "@/hooks/useSiteData";
 import { displayViews, formatViews } from "@/lib/displayViews";
+import { getVideoDescription } from "@/lib/rotatingCopy";
 import { cn } from "@/lib/utils";
-
-const DEFAULT_DESCRIPTION =
-  "Veja completo no nosso VIP agora mesmo. Mais de 10.000 vídeos postados, sem propagandas, com novos conteúdos toda semana.";
 
 export const VideoScreen = ({ id }: { id: string }) => {
   const { back, openVideo } = useNav();
@@ -87,7 +85,7 @@ export const VideoScreen = ({ id }: { id: string }) => {
     );
   }
 
-  const description = item.description?.trim() || DEFAULT_DESCRIPTION;
+  const description = getVideoDescription(item.id, item.description);
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -125,21 +123,28 @@ export const VideoScreen = ({ id }: { id: string }) => {
         </div>
 
         {paywall && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center px-6 text-center">
-            <div className="w-full max-w-sm rounded-3xl bg-background/95 p-6 shadow-floating backdrop-blur">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full gradient-primary shadow-glow">
-                <Lock className="h-6 w-6 text-primary-foreground" />
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center px-5 text-center">
+            <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-background shadow-floating">
+              <div className="flex items-center gap-3 border-b border-border px-4 py-3 text-left">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Lock className="h-4 w-4" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Prévia encerrada</p>
+                  <p className="text-sm font-extrabold leading-tight">Continue assistindo no VIP</p>
+                </div>
               </div>
-              <h3 className="mt-4 text-lg font-extrabold">Continue assistindo no VIP</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Você assistiu uma prévia. Desbloqueie o vídeo completo e o acervo.
-              </p>
-              <button
-                onClick={() => setUpgradeOpen(true)}
-                className="gradient-primary shadow-button mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold text-primary-foreground"
-              >
-                <Sparkles className="h-4 w-4" /> Desbloquear acesso VIP
-              </button>
+              <div className="px-4 py-3 text-left">
+                <p className="text-xs text-muted-foreground">
+                  Você assistiu a prévia. Libere o vídeo completo e o acervo todo agora.
+                </p>
+                <button
+                  onClick={() => setUpgradeOpen(true)}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-foreground py-3 text-sm font-extrabold text-background transition-transform active:scale-[0.98]"
+                >
+                  Desbloquear VIP <Sparkles className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}
