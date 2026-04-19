@@ -26,6 +26,8 @@ const AdminSettings = () => {
       vip_duration_days: Number(form.vip_duration_days),
       payment_gateway: form.payment_gateway,
       support_email: form.support_email,
+      access_fee_enabled: !!form.access_fee_enabled,
+      access_fee_amount: Number(form.access_fee_amount || 0),
     }).eq("id", settings.id);
     setSaving(false);
     if (error) return toast.error(error.message);
