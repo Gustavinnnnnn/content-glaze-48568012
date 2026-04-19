@@ -131,16 +131,23 @@ export const ShortsScreen = () => {
             >
               {s.video_url ? (
                 <video
-                  ref={(el) => {
-                    if (el) videoRefs.current.set(i, el);
-                    else videoRefs.current.delete(i);
-                  }}
+                  data-short=""
+                  data-index={i}
                   src={s.video_url}
                   loop
                   playsInline
-                  preload={Math.abs(i - activeIndex) <= 1 ? "auto" : "metadata"}
+                  muted={muted}
+                  preload="auto"
                   className={`h-full w-full object-cover ${locked ? "blur-2xl scale-110" : ""}`}
                   onClick={() => setMuted((m) => !m)}
+                  onLoadedData={(e) => {
+                    if (i === activeIndex) {
+                      const v = e.currentTarget;
+                      v.muted = muted;
+                      const p = v.play();
+                      if (p && typeof p.catch === "function") p.catch(() => {});
+                    }
+                  }}
                 />
               ) : (
                 <div className="h-full w-full bg-neutral-900" />
