@@ -239,6 +239,12 @@ const AdminTelegram = () => {
                   <Button size="sm" variant="outline" onClick={checkWebhook}>
                     <RefreshCw className="mr-2 h-4 w-4" /> Status webhook
                   </Button>
+                  <Button size="sm" variant="default" onClick={async () => {
+                    try { await callBot("refresh_webhook"); toast.success("Webhook reativado! Mande /start no bot."); }
+                    catch (e: any) { toast.error(e.message); }
+                  }}>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Reativar webhook
+                  </Button>
                   <Button size="sm" variant="outline" onClick={disconnect}>Desconectar</Button>
                 </div>
               </CardContent>
