@@ -68,8 +68,8 @@ export const useVideos = (scope?: Placement) =>
         .select("*, categories(name, slug), models(id, name, handle, avatar_url)")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
-      if (scope === "shorts") q = q.eq("placement", "shorts");
-      else if (scope === "home" || scope === "explore") q = q.in("placement", ["home", "explore"]);
+      // Shorts now shows ALL active videos (home + explore + shorts) so the feed is rich
+      if (scope === "home" || scope === "explore") q = q.in("placement", ["home", "explore"]);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as VideoRow[];

@@ -6,6 +6,7 @@ import { useModels, useVideos, useSiteSettings } from "@/hooks/useSiteData";
 import { resolveImage } from "@/lib/imageResolver";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VipHeroBanner } from "@/components/VipHeroBanner";
+import { fakeModelStats, formatCompact } from "@/lib/fakeStats";
 
 export const HomeScreen = () => {
   const { displayName, vip } = useAuth();
@@ -74,7 +75,7 @@ export const HomeScreen = () => {
           <section className="px-3">
             <div className="grid grid-cols-2 gap-2.5">
               {filtered.map((m, i) => {
-                const posts = videoCounts[m.id] ?? 0;
+                const stats = fakeModelStats(m.id, { posts: videoCounts[m.id] ?? 0 });
                 return (
                   <div
                     key={m.id}
@@ -112,10 +113,10 @@ export const HomeScreen = () => {
                     <div className="flex flex-col px-2.5 py-2">
                       <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <ImageIcon className="h-2.5 w-2.5" /> {posts} posts
+                          <ImageIcon className="h-2.5 w-2.5" /> {stats.posts} posts
                         </span>
                         <span className="flex items-center gap-0.5">
-                          <Heart className="h-2.5 w-2.5" /> {(posts * 47 + 213).toLocaleString("pt-BR")}
+                          <Heart className="h-2.5 w-2.5" /> {formatCompact(stats.likes)}
                         </span>
                       </div>
 
