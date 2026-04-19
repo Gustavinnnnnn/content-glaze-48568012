@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Copy, Check, QrCode, ShieldCheck, ExternalLink, Send } from "lucide-react";
+import { Loader2, Copy, Check, QrCode, ShieldCheck, ExternalLink, Send, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -20,19 +20,28 @@ interface PixData {
   qr_code: string;
   qr_code_base64: string;
   amount: number;
-  expires_at: string;
 }
 
-type Stage = "main" | "fee" | "done";
+interface NextFee {
+  fee_id: string;
+  name: string;
+  description: string | null;
+  amount: number;
+  step_index: number;
+  total_steps: number;
+}
+
+type Stage = "main" | "main_success" | "fee" | "fee_success" | "done";
 
 export const PixCheckout = ({ open, onOpenChange, purchaseType, modelId, title = "Pagamento PIX" }: PixCheckoutProps) => {
-  const { refresh } = useAuth();
+  const { refresh, user } = useAuth();
   const qc = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [pix, setPix] = useState<PixData | null>(null);
   const [copied, setCopied] = useState(false);
   const [stage, setStage] = useState<Stage>("main");
   const [parentOrderId, setParentOrderId] = useState<string | null>(null);
+  const [currentFee, setCurrentFee] = useState<NextFee | null>(null);
   const [vipLink, setVipLink] = useState<string | null>(null);
 
   // Reset on close
@@ -41,21 +50,39 @@ export const PixCheckout = ({ open, onOpenChange, purchaseType, modelId, title =
       setPix(null);
       setStage("main");
       setParentOrderId(null);
+      setCurrentFee(null);
       setVipLink(null);
     }
   }, [open]);
 
-  // Generate PIX for current stage
+  const loadNextFee = useCallback(async (): Promise<NextFee | null> => {
+    if (!user) return null;
+    const { data } = await supabase.rpc("next_pending_fee", { _user_id: user.id });
+    return (data && data[0]) ?? null;
+  }, [user]);
+
+  const fetchVipLink = useCallback(async () => {
+    const { data: tg } = await supabase
+      .from("telegram_config")
+      .select("vip_channel_invite_link")
+      .eq("id", 1)
+      .maybeSingle();
+    setVipLink(tg?.vip_channel_invite_link ?? null);
+  }, []);
+
+  // Generate PIX whenever entering a payment stage
   useEffect(() => {
-    if (!open || stage === "done") return;
+    if (!open) return;
+    if (stage !== "main" && stage !== "fee") return;
+
     let cancelled = false;
     (async () => {
       setLoading(true);
       setPix(null);
       try {
         const body: Record<string, unknown> =
-          stage === "fee"
-            ? { purchase_type: "access_fee", parent_order_id: parentOrderId }
+          stage === "fee" && currentFee
+            ? { purchase_type: "access_fee", fee_id: currentFee.fee_id, parent_order_id: parentOrderId }
             : { purchase_type: purchaseType, model_id: modelId };
         const { data, error } = await supabase.functions.invoke("paradise-create-pix", { body });
         if (error) throw error;
@@ -69,11 +96,13 @@ export const PixCheckout = ({ open, onOpenChange, purchaseType, modelId, title =
       }
     })();
     return () => { cancelled = true; };
-  }, [open, stage, purchaseType, modelId, parentOrderId, onOpenChange]);
+  }, [open, stage, currentFee, parentOrderId, purchaseType, modelId, onOpenChange]);
 
-  // Poll for payment status
+  // Poll order status
   useEffect(() => {
-    if (!pix?.order_id || stage === "done") return;
+    if (!pix?.order_id) return;
+    if (stage !== "main" && stage !== "fee") return;
+
     const interval = setInterval(async () => {
       const { data: order } = await supabase
         .from("orders")
@@ -83,27 +112,33 @@ export const PixCheckout = ({ open, onOpenChange, purchaseType, modelId, title =
       if (order?.status === "paid") {
         clearInterval(interval);
         if (stage === "main") {
-          // Wait briefly for webhook to create the fee order, then load it
           setParentOrderId(order.id);
-          toast.success("Pagamento recebido! Agora a taxa de acesso.");
-          setTimeout(() => setStage("fee"), 1500);
+          toast.success("Pagamento confirmado!");
+          setStage("main_success");
         } else if (stage === "fee") {
-          // Fully paid — show Telegram link
-          await refresh();
-          qc.invalidateQueries();
-          const { data: tg } = await supabase
-            .from("telegram_config")
-            .select("vip_channel_invite_link")
-            .eq("id", 1)
-            .maybeSingle();
-          setVipLink(tg?.vip_channel_invite_link ?? null);
-          setStage("done");
-          toast.success("Acesso liberado! 🎉");
+          toast.success("Taxa paga!");
+          setStage("fee_success");
         }
       }
     }, 4000);
     return () => clearInterval(interval);
-  }, [pix?.order_id, stage, refresh, qc]);
+  }, [pix?.order_id, stage]);
+
+  const advance = async () => {
+    setLoading(true);
+    const next = await loadNextFee();
+    if (next) {
+      setCurrentFee(next);
+      setStage("fee");
+    } else {
+      // Done — activate parent purchase finished, show vip link
+      await refresh();
+      qc.invalidateQueries();
+      await fetchVipLink();
+      setStage("done");
+    }
+    setLoading(false);
+  };
 
   const copyCode = async () => {
     if (!pix?.qr_code) return;
@@ -113,7 +148,18 @@ export const PixCheckout = ({ open, onOpenChange, purchaseType, modelId, title =
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const headerTitle = stage === "fee" ? "Taxa de acesso" : stage === "done" ? "Acesso liberado" : title;
+  const headerTitle =
+    stage === "fee" || stage === "fee_success"
+      ? currentFee?.name ?? "Taxa de acesso"
+      : stage === "done"
+      ? "Acesso liberado"
+      : stage === "main_success"
+      ? "Pagamento confirmado"
+      : title;
+
+  const stepLabel = currentFee && (stage === "fee" || stage === "fee_success")
+    ? `Etapa ${currentFee.step_index} de ${currentFee.total_steps}`
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,17 +171,21 @@ export const PixCheckout = ({ open, onOpenChange, purchaseType, modelId, title =
 
         <div className="gradient-primary relative px-6 pb-6 pt-8 text-center text-primary-foreground">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/20 backdrop-blur">
-            {stage === "done" ? <Check className="h-7 w-7" /> : stage === "fee" ? <ShieldCheck className="h-7 w-7" /> : <QrCode className="h-7 w-7" />}
+            {stage === "done" || stage === "main_success" || stage === "fee_success" ? (
+              <Check className="h-7 w-7" />
+            ) : stage === "fee" ? (
+              <ShieldCheck className="h-7 w-7" />
+            ) : (
+              <QrCode className="h-7 w-7" />
+            )}
           </div>
           <h2 className="mt-3 text-2xl font-extrabold">{headerTitle}</h2>
-          {pix && stage !== "done" && (
+          {stepLabel && (
+            <p className="mt-1 text-[11px] font-bold uppercase tracking-wider opacity-90">{stepLabel}</p>
+          )}
+          {pix && (stage === "main" || stage === "fee") && (
             <p className="mt-1 text-sm opacity-90">
               R$ {(pix.amount / 100).toFixed(2).replace(".", ",")}
-            </p>
-          )}
-          {stage === "fee" && (
-            <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider opacity-95">
-              💰 100% reembolsável
             </p>
           )}
         </div>
@@ -144,14 +194,34 @@ export const PixCheckout = ({ open, onOpenChange, purchaseType, modelId, title =
           {loading && (
             <div className="flex flex-col items-center gap-3 py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Gerando PIX...</p>
+              <p className="text-sm text-muted-foreground">Carregando...</p>
             </div>
           )}
 
-          {stage === "done" && (
+          {/* Success between stages */}
+          {!loading && (stage === "main_success" || stage === "fee_success") && (
             <div className="flex flex-col items-center gap-4 py-4 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                <Check className="h-8 w-8 text-primary" />
+              </div>
               <p className="text-base font-bold text-foreground">Pagamento confirmado!</p>
-              <p className="text-sm text-muted-foreground">Seu acesso ao canal VIP está liberado.</p>
+              <p className="text-sm text-muted-foreground">
+                Clique em continuar para a próxima etapa.
+              </p>
+              <button
+                onClick={advance}
+                className="gradient-primary shadow-button mt-2 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold text-primary-foreground transition-transform active:scale-[0.98]"
+              >
+                Continuar <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* All done */}
+          {!loading && stage === "done" && (
+            <div className="flex flex-col items-center gap-4 py-4 text-center">
+              <p className="text-base font-bold text-foreground">Acesso liberado!</p>
+              <p className="text-sm text-muted-foreground">Seu acesso ao canal VIP está ativo.</p>
               {vipLink ? (
                 <a
                   href={vipLink}
@@ -165,7 +235,7 @@ export const PixCheckout = ({ open, onOpenChange, purchaseType, modelId, title =
                 </a>
               ) : (
                 <p className="rounded-xl bg-secondary px-4 py-3 text-xs text-muted-foreground">
-                  O link do canal VIP ainda não foi configurado. Entre em contato com o suporte.
+                  O link do canal VIP ainda não foi configurado.
                 </p>
               )}
               <button
@@ -177,11 +247,12 @@ export const PixCheckout = ({ open, onOpenChange, purchaseType, modelId, title =
             </div>
           )}
 
-          {pix && stage !== "done" && !loading && (
+          {/* Payment stage */}
+          {!loading && pix && (stage === "main" || stage === "fee") && (
             <>
-              {stage === "fee" && (
+              {stage === "fee" && currentFee?.description && (
                 <div className="mb-4 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-xs text-foreground">
-                  <strong>⚠️ Última etapa:</strong> esta taxa libera seu acesso e será 100% reembolsada.
+                  {currentFee.description}
                 </div>
               )}
               {pix.qr_code_base64 && (

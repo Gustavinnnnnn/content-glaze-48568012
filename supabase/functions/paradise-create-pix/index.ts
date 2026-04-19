@@ -19,47 +19,92 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
     const userClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     );
 
     const { data: { user } } = await userClient.auth.getUser();
     if (!user) throw new Error("Não autenticado");
 
     const body = await req.json();
-    const { purchase_type, model_id, parent_order_id } = body as {
+    const { purchase_type, model_id, fee_id, parent_order_id } = body as {
       purchase_type: "vip_global" | "model_subscription" | "access_fee";
       model_id?: string;
+      fee_id?: string;
       parent_order_id?: string;
     };
 
-    // Get profile
     const { data: profile } = await supabase
       .from("profiles")
-      .select("display_name, email")
+      .select("display_name, email, is_banned")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    // Determine amount + duration
+    if (profile?.is_banned) throw new Error("Conta suspensa");
+
     let amountReais = 0;
     let durationDays = 30;
-    let description = "Acesso VIP";
+    let description = "Acesso";
     let orderId: string;
 
     if (purchase_type === "access_fee") {
-      // Find existing pending fee order for this user (or by parent)
-      let q = supabase.from("orders").select("*").eq("user_id", user.id).eq("purchase_type", "access_fee").eq("status", "pending");
-      if (parent_order_id) q = q.eq("parent_order_id", parent_order_id);
-      const { data: feeOrder } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (!feeOrder) throw new Error("Nenhuma taxa pendente encontrada");
-      orderId = feeOrder.id;
-      amountReais = Number(feeOrder.amount);
+      if (!fee_id) throw new Error("fee_id obrigatório");
+      // Lookup fee
+      const { data: fee } = await supabase
+        .from("access_fees")
+        .select("id, name, amount, is_active")
+        .eq("id", fee_id)
+        .maybeSingle();
+      if (!fee || !fee.is_active) throw new Error("Taxa não encontrada ou inativa");
+
+      // Already paid?
+      const { data: paid } = await supabase
+        .from("user_fee_progress")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("fee_id", fee_id)
+        .maybeSingle();
+      if (paid) throw new Error("Taxa já paga");
+
+      // Reuse existing pending order for this fee or create new
+      const { data: existing } = await supabase
+        .from("orders")
+        .select("id, amount, gateway_transaction_id, gateway_metadata")
+        .eq("user_id", user.id)
+        .eq("fee_id", fee_id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      amountReais = Number(fee.amount);
       durationDays = 0;
-      description = "Taxa de acesso (100% reembolsável)";
+      description = fee.name;
+
+      if (existing) {
+        orderId = existing.id;
+      } else {
+        const { data: order, error: orderErr } = await supabase
+          .from("orders")
+          .insert({
+            user_id: user.id,
+            purchase_type: "access_fee",
+            fee_id,
+            parent_order_id: parent_order_id ?? null,
+            amount: amountReais,
+            status: "pending",
+            duration_days: 0,
+            payment_gateway: "paradise",
+          })
+          .select()
+          .single();
+        if (orderErr) throw orderErr;
+        orderId = order.id;
+      }
     } else {
       if (purchase_type === "vip_global") {
         const { data: s } = await supabase.from("site_settings").select("vip_monthly_price, vip_duration_days").limit(1).maybeSingle();
@@ -75,7 +120,6 @@ Deno.serve(async (req) => {
         throw new Error("purchase_type inválido");
       }
 
-      // Create order pending
       const { data: order, error: orderErr } = await supabase
         .from("orders")
         .insert({
@@ -94,10 +138,8 @@ Deno.serve(async (req) => {
     }
 
     const amountCents = Math.round(amountReais * 100);
-
     const postbackUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/paradise-webhook`;
 
-    // Customer data — Paradise requires document/phone; use defaults if missing
     const payload = {
       amount: amountCents,
       description,
@@ -114,10 +156,7 @@ Deno.serve(async (req) => {
 
     const res = await fetch(PARADISE_URL, {
       method: "POST",
-      headers: {
-        "X-API-Key": apiKey,
-        "Content-Type": "application/json",
-      },
+      headers: { "X-API-Key": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -127,14 +166,10 @@ Deno.serve(async (req) => {
       throw new Error(data.message || "Erro ao gerar PIX");
     }
 
-    // Save transaction id on order
-    await supabase
-      .from("orders")
-      .update({
-        gateway_transaction_id: String(data.transaction_id),
-        gateway_metadata: data,
-      })
-      .eq("id", orderId);
+    await supabase.from("orders").update({
+      gateway_transaction_id: String(data.transaction_id),
+      gateway_metadata: data,
+    }).eq("id", orderId);
 
     return new Response(
       JSON.stringify({
@@ -145,7 +180,7 @@ Deno.serve(async (req) => {
         amount: data.amount,
         expires_at: data.expires_at,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
     console.error(e);
