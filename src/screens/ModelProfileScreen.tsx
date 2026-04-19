@@ -2,13 +2,13 @@ import { useState } from "react";
 import { ArrowLeft, Check, Crown, Lock, MessageCircle, Share2, Sparkles, Verified, Loader2, Image as ImageIcon, Film } from "lucide-react";
 import { useNav } from "@/contexts/NavContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useModel, useModelVideos } from "@/hooks/useSiteData";
+import { useModel, useModelVideos, useSiteSettings } from "@/hooks/useSiteData";
 import { useModelPhotos } from "@/components/admin/ModelPhotosManager";
 import { resolveImage } from "@/lib/imageResolver";
 import { getModelBio } from "@/lib/rotatingCopy";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
-import { PixCheckout } from "@/components/PixCheckout";
+import { UpgradeDialog } from "@/components/UpgradeDialog";
 
 export const ModelProfileScreen = ({ id }: { id: string }) => {
   const { back, openVideo } = useNav();
@@ -17,20 +17,19 @@ export const ModelProfileScreen = ({ id }: { id: string }) => {
   const { data: model, isLoading } = useModel(id);
   const { data: videos = [] } = useModelVideos(id);
   const { data: photos = [] } = useModelPhotos(id);
+  const { data: settings } = useSiteSettings();
   const [tab, setTab] = useState<"photos" | "videos">("photos");
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pixOpen, setPixOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const subscribed = !!model && (vip.isVip || subscribedModelIds.includes(model.id));
+  const vipPrice = settings?.vip_monthly_price ?? 19.9;
 
-  const handleConfirm = () => {
+  const openUpgrade = () => {
     if (!user) {
       navigate("/auth");
       return;
     }
-    if (!model) return;
-    setConfirmOpen(false);
-    setPixOpen(true);
+    setUpgradeOpen(true);
   };
 
   if (isLoading) {
