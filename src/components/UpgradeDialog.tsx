@@ -18,9 +18,9 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
   const [pixOpen, setPixOpen] = useState(false);
 
   const benefits = [
-    { icon: Zap, text: "Acesso ilimitado a todo acervo" },
-    { icon: Sparkles, text: "Novos conteúdos toda semana" },
-    { icon: Crown, text: "Experiência sem interrupções" },
+    { icon: Zap, text: "Acesso a TODAS as modelos com 1 pagamento" },
+    { icon: Sparkles, text: "Todos os vídeos VIP liberados" },
+    { icon: Crown, text: "Novidades semanais sem custo extra" },
   ];
 
   const handleActivate = () => {
@@ -47,9 +47,9 @@ export const UpgradeDialog = ({ open, onOpenChange }: UpgradeDialogProps) => {
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur">
                 <Crown className="h-8 w-8" />
               </div>
-              <h2 className="mt-4 text-3xl font-extrabold tracking-tight">Acesso VIP</h2>
-              <p className="mt-1 text-sm opacity-90">
-                R$ {price.toFixed(2).replace(".", ",")} por {days} dias
+              <h2 className="mt-4 text-3xl font-extrabold tracking-tight">Acesso VIP Global</h2>
+              <p className="mt-1 text-sm font-semibold opacity-95">
+                R$ {price.toFixed(2).replace(".", ",")} · {days} dias · libera TUDO
               </p>
             </div>
           </div>
