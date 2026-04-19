@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Crown, Loader2, Mail, Lock, User as UserIcon, Sparkles } from "lucide-react";
+import { Crown, Loader2, Mail, Lock, Sparkles } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 
@@ -10,18 +10,11 @@ const signInSchema = z.object({
   password: z.string().min(6, "Senha precisa ter ao menos 6 caracteres").max(72),
 });
 
-const signUpSchema = signInSchema.extend({
-  displayName: z.string().trim().min(2, "Nome muito curto").max(60),
-});
-
 const Auth = () => {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const { user, loading, signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">(params.get("mode") === "signup" ? "signup" : "signin");
+  const { user, loading, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -32,9 +25,7 @@ const Auth = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
-    const schema = mode === "signin" ? signInSchema : signUpSchema;
-    const payload = mode === "signin" ? { email, password } : { email, password, displayName };
-    const parsed = schema.safeParse(payload);
+    const parsed = signInSchema.safeParse({ email, password });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
       parsed.error.errors.forEach((err) => {
@@ -44,22 +35,17 @@ const Auth = () => {
       return;
     }
     setSubmitting(true);
-    const result =
-      mode === "signin"
-        ? await signIn(email, password)
-        : await signUp(email, password, displayName);
+    const result = await signIn(email, password);
     setSubmitting(false);
     if (result.error) {
       toast.error(
-        result.error.includes("already registered")
-          ? "Esse email já está cadastrado. Tente entrar."
-          : result.error.includes("Invalid login")
+        result.error.includes("Invalid login")
           ? "Email ou senha incorretos."
           : result.error
       );
       return;
     }
-    toast.success(mode === "signin" ? "Bem-vindo de volta!" : "Conta criada!");
+    toast.success("Bem-vindo de volta!");
     navigate("/", { replace: true });
   };
 
@@ -73,31 +59,14 @@ const Auth = () => {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl gradient-primary shadow-glow">
             <Crown className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">
-            {mode === "signin" ? "Bem-vindo de volta" : "Criar conta"}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "signin"
-              ? "Entre para continuar"
-              : "Cadastre-se em segundos e descubra o acervo"}
-          </p>
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Acesso restrito</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Entre com suas credenciais</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
           className="mt-8 space-y-4 rounded-3xl border border-border bg-card p-6 shadow-floating"
         >
-          {mode === "signup" && (
-            <Field
-              icon={<UserIcon className="h-4 w-4" />}
-              label="Nome"
-              value={displayName}
-              onChange={setDisplayName}
-              placeholder="Como podemos te chamar?"
-              error={errors.displayName}
-              autoComplete="name"
-            />
-          )}
           <Field
             icon={<Mail className="h-4 w-4" />}
             label="Email"
@@ -114,9 +83,9 @@ const Auth = () => {
             type="password"
             value={password}
             onChange={setPassword}
-            placeholder="No mínimo 6 caracteres"
+            placeholder="Sua senha"
             error={errors.password}
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
+            autoComplete="current-password"
           />
 
           <button
@@ -129,20 +98,8 @@ const Auth = () => {
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                {mode === "signin" ? "Entrar" : "Criar conta"}
+                Entrar
               </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setMode((m) => (m === "signin" ? "signup" : "signin"))}
-            className="block w-full pt-2 text-center text-xs font-medium text-muted-foreground"
-          >
-            {mode === "signin" ? (
-              <>Não tem conta? <span className="font-bold text-primary">Cadastre-se</span></>
-            ) : (
-              <>Já tem conta? <span className="font-bold text-primary">Entrar</span></>
             )}
           </button>
         </form>
