@@ -202,34 +202,43 @@ export const ShortsScreen = () => {
               </div>
 
               {showPaywall && (
-                <div className="absolute inset-x-0 bottom-24 z-20 px-4 pr-20 animate-fade-in">
-                  <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/70 p-3 backdrop-blur-xl shadow-floating">
+                <div className="absolute inset-x-0 bottom-24 z-20 px-4 animate-fade-in">
+                  <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-[hsl(20_95%_55%)] via-[hsl(15_92%_50%)] to-[hsl(0_85%_48%)] p-3.5 text-white shadow-floating">
+                    <span className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
+                    <span className="pointer-events-none absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-yellow-300/20 blur-2xl" />
                     <button
                       onClick={() => setPaywallDismissed((prev) => ({ ...prev, [i]: true }))}
-                      className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-white/70"
+                      className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/30 text-white/90 backdrop-blur-md"
                       aria-label="Fechar"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl gradient-primary shadow-glow">
-                        <Crown className="h-5 w-5 text-primary-foreground" />
+                    <div className="relative flex items-center gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md">
+                        <Crown className="h-6 w-6 drop-shadow" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-primary-glow">
-                          Conteúdo VIP
+                      <div className="min-w-0 flex-1 pr-6">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider opacity-95">
+                          Conteúdo VIP bloqueado
                         </p>
-                        <p className="truncate text-sm font-bold text-white">
-                          Desbloqueie sem limites
+                        <p className="text-[15px] font-extrabold leading-tight drop-shadow">
+                          Veja COMPLETO sem cortes
+                        </p>
+                        <p className="text-[11px] font-medium opacity-95">
+                          Todas as modelos · todos os vídeos
                         </p>
                       </div>
                     </div>
                     <button
                       onClick={() => setUpgradeOpen(true)}
-                      className="gradient-primary shadow-button mt-3 flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-xs font-bold text-primary-foreground transition-transform active:scale-[0.98]"
+                      className="relative mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-white py-2.5 text-xs font-extrabold text-[hsl(15_92%_45%)] shadow-button transition-transform active:scale-[0.98]"
                     >
-                      <Sparkles className="h-3.5 w-3.5" /> Assinar agora
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Liberar tudo por R$ {vipPrice.toFixed(2).replace(".", ",")}
                     </button>
+                    <p className="mt-1.5 text-center text-[10px] font-semibold opacity-95">
+                      Pagamento único · Ativação imediata
+                    </p>
                   </div>
                 </div>
               )}
